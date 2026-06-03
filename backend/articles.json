@@ -1,0 +1,77 @@
+{
+  "_note": "Simulated article corpus for the AutoNerve demo (scenario simulator / what-if disruption injector). Not real news. In production this stream comes from GDELT/Reuters/RSS. Each article carries an internal 'expected' tag for verification only; the extractor does not read it.",
+  "articles": [
+    {
+      "id": "ART-001", "date": "2026-05-28", "source": "Sim-Reuters", "region": "China", "region_code": "CN",
+      "headline": "China tightens export controls on high-grade neodymium magnets",
+      "body": "Beijing's commerce ministry announced new licensing requirements on exports of high-grade neodymium and NdFeB magnet materials, citing strategic-resource policy. Analysts expect tighter rare-earth supply and price pressure over the coming quarter.",
+      "expected": {"material": "neodymium", "commodity": "RARE-EARTH", "controlType": "export-control"}
+    },
+    {
+      "id": "ART-002", "date": "2026-05-27", "source": "Sim-Bloomberg", "region": "Taiwan", "region_code": "TW",
+      "headline": "Power incident halts output at major Taiwan wafer fab",
+      "body": "A grid disturbance forced a temporary shutdown at a leading Taiwanese semiconductor fab, disrupting silicon wafer and automotive-grade chip supply. Recovery is expected to take several weeks, raising lead-time concerns for ECU makers.",
+      "expected": {"material": "silicon", "commodity": "SILICON", "controlType": "disruption"}
+    },
+    {
+      "id": "ART-003", "date": "2026-05-26", "source": "Sim-Reuters", "region": "Chile", "region_code": "CL",
+      "headline": "Strike at major Chilean mine drives copper sharply higher",
+      "body": "Workers at one of the world's largest copper mines began an indefinite strike, sending LME copper prices up over four percent intraday. Traders drew comparisons to the 2017 Escondida stoppage and warned of sustained tightness.",
+      "expected": {"commodity": "COPPER", "controlType": "strike"}
+    },
+    {
+      "id": "ART-004", "date": "2026-05-25", "source": "Sim-MarineTraffic", "region": "Malaysia", "region_code": "MY",
+      "headline": "Port congestion worsens at Penang amid weather delays",
+      "body": "Vessel queues lengthened at Penang as monsoon weather and equipment shortages slowed container handling. Electronics and harness-connector shipments face multi-day delays.",
+      "expected": {"region": "MY", "controlType": "port-congestion"}
+    },
+    {
+      "id": "ART-005", "date": "2026-05-24", "source": "Sim-SteelDaily", "region": "Global", "region_code": "",
+      "headline": "Hot-rolled coil steel prices firm on restocking demand",
+      "body": "Steel HRC benchmarks edged higher this week as mills lifted offers on restocking demand. Auto stampers expect modest input-cost increases over the next month.",
+      "expected": {"material": "steel", "commodity": "STEEL", "controlType": "price"}
+    },
+    {
+      "id": "ART-006", "date": "2026-05-23", "source": "Sim-Reuters", "region": "China", "region_code": "CN",
+      "headline": "Rare-earth export quota review adds to supply uncertainty",
+      "body": "A scheduled review of rare-earth export quotas added to uncertainty for neodymium and dysprosium buyers. Magnet producers outside China are reportedly receiving fresh qualification inquiries.",
+      "expected": {"material": "neodymium", "commodity": "RARE-EARTH", "controlType": "export-control"}
+    },
+    {
+      "id": "ART-007", "date": "2026-05-22", "source": "Sim-MetalsWire", "region": "Global", "region_code": "",
+      "headline": "Aluminium edges up on energy-cost concerns",
+      "body": "LME aluminium ticked higher on rising smelter energy costs in Europe. Downstream casting buyers are monitoring contracts.",
+      "expected": {"commodity": "ALUMINIUM", "controlType": "price"}
+    },
+    {
+      "id": "ART-008", "date": "2026-05-21", "source": "Sim-AutoNews", "region": "India", "region_code": "IN",
+      "headline": "Indian EV passenger sales rise 18% in April",
+      "body": "Electric passenger-vehicle registrations climbed eighteen percent year on year in April, led by compact sedans. Industry bodies cited improving charging infrastructure.",
+      "expected": {"controlType": "none"}
+    },
+    {
+      "id": "ART-009", "date": "2026-05-20", "source": "Sim-AutoNews", "region": "India", "region_code": "IN",
+      "headline": "Tier-1 supplier announces new fastener plant in Tamil Nadu",
+      "body": "A leading fastener maker said it will commission a new high-tensile fastener line in Tamil Nadu next year, expanding domestic capacity. No disruption to current supply is expected.",
+      "expected": {"controlType": "none"}
+    },
+    {
+      "id": "ART-010", "date": "2026-05-19", "source": "Sim-MetalsWire", "region": "Global", "region_code": "",
+      "headline": "Lithium carbonate prices slip on softer demand",
+      "body": "Battery-grade lithium carbonate eased again this week amid softer cell demand and ample inventory. Cathode makers reported comfortable coverage.",
+      "expected": {"commodity": "LITHIUM", "controlType": "price"}
+    },
+    {
+      "id": "ART-011", "date": "2026-05-18", "source": "Sim-Bloomberg", "region": "Global", "region_code": "",
+      "headline": "Copper rally extends as inventories fall to multi-month low",
+      "body": "Copper extended gains as visible LME inventories dropped to a multi-month low, reinforcing supply-tightness fears. Wire and harness buyers face higher input costs.",
+      "expected": {"commodity": "COPPER", "controlType": "price"}
+    },
+    {
+      "id": "ART-012", "date": "2026-05-17", "source": "Sim-AutoNews", "region": "Germany", "region_code": "DE",
+      "headline": "Chassis supplier reports record quarterly deliveries",
+      "body": "A German chassis-systems supplier reported record quarterly deliveries and reaffirmed full-year guidance. The company cited stable operations across its European plants.",
+      "expected": {"controlType": "none"}
+    }
+  ]
+}

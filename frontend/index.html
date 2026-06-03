@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AutoNerve · Control Room</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/globe.gl"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b10; --panel:#0d141c; --panel2:#111b25; --line:#1d2b38;
+    --txt:#dbe7ef; --muted:#6f8597; --teal:#2dd4bf; --teal-d:#0e7c73;
+    --amber:#f3a712; --red:#ef4759; --green:#34d399; --cyan:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:'IBM Plex Sans',sans-serif;
+    background-image:radial-gradient(circle at 18% -10%,rgba(45,212,191,.08),transparent 40%),
+                     radial-gradient(circle at 90% 0%,rgba(56,189,248,.06),transparent 35%);}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .tab{cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);
+    padding:10px 4px;font-weight:600;letter-spacing:.02em;transition:.18s}
+  .tab.active{color:var(--teal);border-color:var(--teal)}
+  .tab:hover{color:var(--txt)}
+  .kpi-val{font-family:'IBM Plex Mono',monospace;font-weight:600}
+  .pulse{animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .reveal{animation:reveal .5s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .art{cursor:pointer;transition:.15s;border-left:2px solid transparent}
+  .art:hover{background:var(--panel2);border-left-color:var(--teal)}
+  .art.sel{background:var(--panel2);border-left-color:var(--teal)}
+  .bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:4px}
+  .chip{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1d2b38;border-radius:8px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  /* plant floor animations */
+  .part-move{animation:beltmove 4s linear infinite}
+  .part-2{animation-delay:1.3s}.part-3{animation-delay:2.6s}
+  @keyframes beltmove{0%{transform:translateX(0)}100%{transform:translateX(640px)}}
+  .arm{transform-origin:0 0;animation:armswing 4s ease-in-out infinite}
+  @keyframes armswing{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(14deg)}}
+  .arm-fore{transform-origin:0 0;animation:forearm 4s ease-in-out infinite}
+  @keyframes forearm{0%,100%{transform:translate(0,-66px) rotate(10deg)}50%{transform:translate(0,-66px) rotate(-22deg)}}
+  .op-arm{transform-origin:6px 26px;animation:opwork 1.6s ease-in-out infinite}
+  @keyframes opwork{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-14deg)}}
+  .scan{position:relative;aspect-ratio:1;border-radius:6px;background:#0c151c;border:1px solid var(--line);overflow:hidden}
+  .scan .sweep{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);animation:sweep 2.2s linear infinite}
+  @keyframes sweep{0%{top:-4px}100%{top:104%}}
+  .scan.def{border-color:var(--red)}
+  .defbox{position:absolute;border:1.5px solid var(--red);border-radius:2px}
+  .fc-sc{background:transparent;color:var(--muted);border:none;border-right:1px solid var(--line);cursor:pointer;font-weight:600}
+  .fc-sc:last-child{border-right:none}
+  .fc-sc.on{background:var(--teal-d);color:#eafffb}
+</style>
+</head>
+<body>
+<div class="max-w-[1400px] mx-auto px-6 py-5">
+
+  <!-- top bar -->
+  <header class="flex items-center justify-between mb-5">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-md flex items-center justify-center mono font-bold"
+           style="background:linear-gradient(135deg,var(--teal-d),var(--cyan));color:#04141a">AN</div>
+      <div>
+        <div class="text-lg font-bold tracking-tight">AutoNerve <span class="mono text-[var(--muted)] text-sm font-normal">· Control Room</span></div>
+        <div class="text-xs text-[var(--muted)]">Mumbai Plant 1 · unified supply + plant nervous system</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs">
+      <span class="w-2 h-2 rounded-full pulse" style="background:var(--green)"></span>
+      <span class="text-[var(--green)] mono">LIVE</span>
+      <span class="text-[var(--muted)] mono" id="clock"></span>
+    </div>
+  </header>
+
+  <!-- tabs -->
+  <nav class="flex gap-7 border-b border-[var(--line)] mb-5 text-sm">
+    <div class="tab active" data-tab="control">CONTROL ROOM</div>
+    <div class="tab" data-tab="globe">SUPPLY GLOBE</div>
+    <div class="tab" data-tab="plant">PLANT FLOOR</div>
+    <div class="tab" data-tab="bom">BOM EXPLORER</div>
+    <div class="tab" data-tab="planning">PLANNING &amp; ACTIONS</div>
+    <div class="tab" data-tab="procure">PROCUREMENT</div>
+    <div class="tab" data-tab="analytics">ANALYTICS</div>
+    <div class="tab" data-tab="agentrun">AGENTIC RUN</div>
+    <div class="tab" data-tab="sourcing">ALTERNATE SOURCING</div>
+  </nav>
+
+  <!-- ===== CONTROL ROOM ===== -->
+  <section id="tab-control">
+    <!-- KPI strip -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3" id="kpis"></div>
+    <div id="model-legend" class="text-[11px] text-[var(--muted)] mb-4 flex flex-wrap gap-x-4 gap-y-1"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <!-- scenario simulator -->
+      <div class="panel lg:col-span-2 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-semibold">Signal feed <span class="text-[var(--muted)] font-normal">· scenario simulator</span></div>
+          <span class="chip" style="background:#10212b;color:var(--cyan)">GDELT / RSS (sim)</span>
+        </div>
+        <div class="text-xs text-[var(--muted)] mb-2">Click an article to inject the event &rarr; the system extracts, propagates, and decides.</div>
+        <div id="feed" class="space-y-1 max-h-[460px] overflow-auto pr-1"></div>
+      </div>
+
+      <!-- decision panel -->
+      <div class="lg:col-span-3 space-y-4">
+        <div id="alert" class="panel p-5 hidden"></div>
+        <div id="decision" class="panel p-5 hidden"></div>
+        <div id="placeholder" class="panel p-8 text-center text-[var(--muted)]">
+          <div class="text-4xl mb-2 mono" style="color:var(--teal-d)">⊙</div>
+          <div class="text-sm">Inject a signal from the feed to see the live decision thread:</div>
+          <div class="mono text-xs mt-2 text-[var(--muted)]">extract &rarr; propagate &rarr; expose &rarr; optimize &rarr; act</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GLOBE ===== -->
+  <section id="tab-globe" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div class="panel lg:col-span-3 p-2 relative" style="height:560px">
+        <div id="globe" style="width:100%;height:100%"></div>
+        <div class="absolute top-4 left-4 text-xs mono text-[var(--muted)]">SUPPLIER NETWORK · arcs &rarr; Mumbai Plant 1</div>
+      </div>
+      <div class="panel p-4">
+        <div class="text-sm font-semibold mb-3">Legend &amp; status</div>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:var(--red)"></span> High risk (&ge; 0.7)</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:var(--amber)"></span> Medium (0.4–0.7)</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:var(--green)"></span> Low (&lt; 0.4)</div>
+        </div>
+        <div class="border-t border-[var(--line)] my-4"></div>
+        <div class="text-sm font-semibold mb-2">Affected by current event</div>
+        <div id="globe-affected" class="text-xs text-[var(--muted)]">No event injected.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PLANT FLOOR ===== -->
+  <section id="tab-plant" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <span class="chip pulse" style="background:#2a1115;color:var(--red)">● LIVE</span>
+        <div class="text-sm font-semibold">Shop floor · Mumbai Plant 1 <span class="text-[var(--muted)] font-normal">· Shift A</span></div>
+      </div>
+      <div id="plant-kpis" class="flex gap-5 text-xs"></div>
+    </div>
+
+    <!-- line animation + work queue -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+      <div class="panel lg:col-span-2 p-3 relative overflow-hidden" style="height:200px">
+        <div class="absolute top-3 left-4 text-xs mono text-[var(--muted)] z-10">LINE 2 · MAGNET ASSEMBLY · live feed</div>
+        <div class="absolute top-3 right-4 text-xs mono z-10" style="color:var(--teal)">▲ <span id="liveUnits">0</span> units/shift</div>
+        <!-- stylized operator + conveyor (pure SVG/CSS, no external media) -->
+        <svg viewBox="0 0 600 200" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="belt" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#16242f"/><stop offset="1" stop-color="#0c151c"/>
+            </linearGradient>
+          </defs>
+          <!-- conveyor -->
+          <rect x="0" y="138" width="600" height="26" fill="url(#belt)" stroke="#1d2b38"/>
+          <g fill="#223847">
+            <rect class="belt-tick" x="0" y="160" width="14" height="4"></rect>
+          </g>
+          <!-- moving parts on belt -->
+          <g>
+            <rect class="part-move" x="-40" y="120" width="22" height="18" rx="3" fill="#2dd4bf"/>
+            <rect class="part-move part-2" x="-40" y="120" width="22" height="18" rx="3" fill="#38bdf8"/>
+            <rect class="part-move part-3 part-bad" x="-40" y="120" width="22" height="18" rx="3" fill="#ef4759"/>
+          </g>
+          <!-- robot arm -->
+          <g transform="translate(150,138)">
+            <rect x="-6" y="0" width="12" height="-6" fill="#314b5c"/>
+            <g class="arm">
+              <rect x="-4" y="-70" width="8" height="72" rx="4" fill="#2a4252"/>
+              <g class="arm-fore" transform="translate(0,-66)">
+                <rect x="-3" y="-44" width="6" height="46" rx="3" fill="#356074"/>
+                <circle cx="0" cy="-44" r="6" fill="var(--teal)"/>
+              </g>
+              <circle cx="0" cy="0" r="7" fill="#1d2b38" stroke="#2dd4bf" stroke-width="1.5"/>
+            </g>
+          </g>
+          <!-- operator silhouette -->
+          <g transform="translate(470,86)" fill="#22394a">
+            <circle cx="0" cy="0" r="13"/>
+            <path d="M-18,64 Q-18,18 0,18 Q18,18 18,64 Z"/>
+            <rect class="op-arm" x="6" y="22" width="34" height="9" rx="4" transform="rotate(8)"/>
+          </g>
+          <text x="455" y="170" font-size="9" fill="#6f8597" font-family="monospace">operator · QC station</text>
+        </svg>
+        <span class="absolute bottom-3 right-4 mono text-[10px] text-[var(--muted)]" id="plant-clock"></span>
+      </div>
+
+      <div class="panel p-4">
+        <div class="text-sm font-semibold mb-3">Work orders</div>
+        <div id="workq" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- production lines -->
+    <div id="lines" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <!-- vision QC scan feed -->
+      <div class="panel lg:col-span-2 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-semibold">Vision QC <span class="text-[var(--muted)] font-normal">· live scan</span></div>
+          <span class="chip" style="background:#10212b;color:var(--cyan)">YOLOv8 / PatchCore</span>
+        </div>
+        <div id="scangrid" class="grid grid-cols-4 gap-2"></div>
+        <div class="text-[11px] text-[var(--muted)] mt-3 mono" id="scan-status"></div>
+      </div>
+
+      <!-- supplier-wise defects -->
+      <div class="panel lg:col-span-3 p-4">
+        <div class="text-sm font-semibold mb-1">Supplier-wise defects detected</div>
+        <div class="text-xs text-[var(--muted)] mb-3">Incoming-lot inspection · click <span style="color:var(--teal)">trace</span> to push a quality signal into sourcing (plant &rarr; supply loop).</div>
+        <div id="deftable" class="max-h-[260px] overflow-auto"></div>
+        <div id="defloop" class="mt-3"></div>
+      </div>
+    </div>
+
+    <!-- energy anomaly + operator copilot -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mt-4">
+      <div class="panel lg:col-span-2 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold">Energy monitor <span class="text-[var(--muted)] font-normal">· Line 2</span></div>
+          <span class="mono text-xs" id="energy-now" style="color:var(--amber)">—</span>
+        </div>
+        <div id="energy-spark" class="mb-2"></div>
+        <div id="energy-anom" class="text-[11px]"></div>
+      </div>
+
+      <div class="panel lg:col-span-3 p-4">
+        <div class="text-sm font-semibold mb-1">Operator copilot <span class="text-[var(--muted)] font-normal">· grounded in SOPs</span></div>
+        <div class="text-xs text-[var(--muted)] mb-3">Ask a floor question — answered from the SOP base, with the source cited.</div>
+        <div class="flex flex-wrap gap-2 mb-3" id="op-presets">
+          <span class="chip" style="background:#10212b;color:var(--cyan);cursor:pointer" onclick="askOp('Line 2 burr spike — what do I check?')">Line 2 burr?</span>
+          <span class="chip" style="background:#10212b;color:var(--cyan);cursor:pointer" onclick="askOp('How do I fix casting porosity?')">Casting porosity?</span>
+          <span class="chip" style="background:#10212b;color:var(--cyan);cursor:pointer" onclick="askOp('Spindle vibration and energy anomaly?')">Spindle vibration?</span>
+          <span class="chip" style="background:#10212b;color:var(--cyan);cursor:pointer" onclick="askOp('ECU solder void rework limit?')">Solder void?</span>
+        </div>
+        <div class="flex gap-2 mb-3">
+          <input id="op-input" placeholder="Type a question…" class="flex-1 px-3 py-2 rounded-md text-sm bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] outline-none"/>
+          <button onclick="askOp(document.getElementById('op-input').value)" class="px-4 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">Ask</button>
+        </div>
+        <div id="op-answer" class="text-sm"></div>
+      </div>
+    </div>
+
+    <!-- one-shot visual fault detection (expander) -->
+    <div class="panel p-4 mt-4">
+      <button onclick="toggleOneshot()" class="w-full flex items-center justify-between text-left">
+        <span class="text-sm font-semibold">One-shot visual fault detection <span class="text-[var(--muted)] font-normal">· reference-vs-test image diff</span></span>
+        <span id="os-caret" class="text-[var(--muted)]">▸</span>
+      </button>
+      <div id="os-body" class="hidden mt-3">
+        <div class="text-xs text-[var(--muted)] mb-3">Compares an incoming part against a single golden reference (no training) — flags and localizes the defect region. <span class="chip" style="background:#10261f;color:var(--teal)">real CV</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <div class="text-[10px] text-[var(--muted)] uppercase mb-1">Golden reference</div>
+            <img src="" id="os-ref" style="width:100%;border:1px solid var(--line);border-radius:6px"/>
+            <div class="text-[10px] text-[var(--muted)] mt-2 mb-1 uppercase">Inspect sample</div>
+            <div id="os-samples" class="flex flex-col gap-1"></div>
+          </div>
+          <div class="md:col-span-2">
+            <div class="text-[10px] text-[var(--muted)] uppercase mb-1">Test unit <span id="os-name"></span></div>
+            <div style="position:relative;display:inline-block;width:100%">
+              <img src="" id="os-test" style="width:100%;border:1px solid var(--line);border-radius:6px"/>
+              <div id="os-box" class="hidden" style="position:absolute;border:2px solid var(--red);border-radius:3px;box-shadow:0 0 0 9999px rgba(0,0,0,.04)"></div>
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] text-[var(--muted)] uppercase mb-1">Verdict</div>
+            <div id="os-verdict" class="panel p-3 text-center" style="background:var(--panel2)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== BOM EXPLORER ===== -->
+  <section id="tab-bom" class="hidden">
+    <div class="panel p-5">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div class="text-sm font-semibold">BOM cost explorer</div>
+          <div class="text-xs text-[var(--muted)]">Pick a supplier path for each component — total cost &amp; critical-path lead time roll up live.</div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-[var(--muted)]">Assembly:</span>
+          <select id="bom-product" class="px-3 py-2 rounded-md bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] outline-none mono text-xs"></select>
+          <button onclick="bomAuto('cost')" class="chip" style="background:#10261f;color:var(--teal);border:none;cursor:pointer">⟳ Cheapest</button>
+          <button onclick="bomAuto('fast')" class="chip" style="background:#10212b;color:var(--cyan);border:none;cursor:pointer">⟳ Fastest</button>
+        </div>
+      </div>
+      <!-- live rollup -->
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="panel p-3 text-center"><div class="text-xs text-[var(--muted)]">Per-vehicle component cost</div><div id="bom-cost" class="kpi-val text-2xl" style="color:var(--teal)">—</div></div>
+        <div class="panel p-3 text-center"><div class="text-xs text-[var(--muted)]">Critical-path lead</div><div id="bom-lead" class="kpi-val text-2xl" style="color:var(--cyan)">—</div></div>
+        <div class="panel p-3 text-center"><div class="text-xs text-[var(--muted)]">China dependency</div><div id="bom-china" class="kpi-val text-2xl" style="color:var(--amber)">—</div></div>
+      </div>
+      <div id="bom-graph"></div>
+    </div>
+  </section>
+
+  <!-- ===== PLANNING & ACTIONS ===== -->
+  <section id="tab-planning" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div class="panel lg:col-span-3 p-5">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <div class="text-sm font-semibold">Demand forecast <span class="text-[var(--muted)] font-normal">· risk-adjusted</span></div>
+            <div class="text-xs text-[var(--muted)]">Trend forecast from history; a supply-risk signal widens the band.</div>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <select id="fc-product" class="px-2 py-1.5 rounded-md bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] mono text-xs outline-none"></select>
+            <div class="flex rounded-md overflow-hidden border border-[var(--line)]" id="fc-scenarios">
+              <button data-sc="base" class="fc-sc px-3 py-1.5" onclick="setScenario('base')">Base</button>
+              <button data-sc="conservative" class="fc-sc px-3 py-1.5" onclick="setScenario('conservative')">Conservative</button>
+              <button data-sc="aggressive" class="fc-sc px-3 py-1.5" onclick="setScenario('aggressive')">Aggressive</button>
+            </div>
+          </div>
+        </div>
+        <div id="fc-chart"></div>
+        <div id="fc-meta" class="text-[11px] text-[var(--muted)] mt-2 mono"></div>
+      </div>
+
+      <div class="panel lg:col-span-2 p-5">
+        <div class="text-sm font-semibold mb-1">Meeting → actions</div>
+        <div class="text-xs text-[var(--muted)] mb-3">Schema-bound extraction from a meeting transcript.</div>
+        <div class="flex gap-2 mb-3 text-xs">
+          <select id="mtg-select" class="flex-1 px-2 py-1.5 rounded-md bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] mono text-xs outline-none"></select>
+          <button onclick="extractActions()" class="px-3 rounded-md font-semibold" style="background:var(--teal-d);color:#eafffb">Extract</button>
+        </div>
+        <div id="actions-out" class="space-y-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PROCUREMENT ===== -->
+  <section id="tab-procure" class="hidden">
+    <div class="panel p-5 mb-4">
+      <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+        <div class="text-sm font-semibold">Procurement plan <span class="text-[var(--muted)] font-normal">· price forecast · scarcity · pre-stock to save</span></div>
+        <div id="procure-summary" class="text-xs"></div>
+      </div>
+      <div class="text-xs text-[var(--muted)] mb-3">Scarcity blends supplier risk, China exposure, single-sourcing, and price trend. "Top up" pre-buys ahead of a forecast rise.</div>
+      <div id="procure-table" class="overflow-auto"></div>
+    </div>
+    <div class="panel p-5">
+      <div class="text-sm font-semibold mb-3">📋 Final buy list <span class="text-[var(--muted)] font-normal">· items + quantities to order now</span></div>
+      <div id="buy-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== ANALYTICS ===== -->
+  <section id="tab-analytics" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold">Cp / Cpk forecast</div>
+          <select id="cpk-line" class="px-2 py-1 rounded bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] mono text-xs outline-none"></select>
+        </div>
+        <div id="cpk-chart"></div>
+        <div id="cpk-meta" class="mt-2"></div>
+      </div>
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold">Yield waterfall</div>
+          <select id="yield-line" class="px-2 py-1 rounded bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] mono text-xs outline-none"></select>
+        </div>
+        <div id="yield-chart"></div>
+        <div id="yield-summary" class="text-[11px] text-[var(--muted)] mt-2"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-semibold">Supplier scorecard</div>
+          <select id="sc-supplier" class="px-2 py-1 rounded bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] mono text-xs outline-none"></select>
+        </div>
+        <div id="scorecard"></div>
+      </div>
+      <div class="panel p-5">
+        <div class="text-sm font-semibold mb-1">PO slip forecast</div>
+        <div id="po-summary" class="text-xs text-[var(--muted)] mb-2"></div>
+        <div id="po-table" class="overflow-auto max-h-[300px]"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AGENTIC RUN ===== -->
+  <section id="tab-agentrun" class="hidden">
+    <div class="panel p-5 mb-4">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-sm font-semibold mb-1">Agentic decision run <span class="text-[var(--muted)] font-normal">· six role-specialized Qwen agents, one event</span></div>
+          <div id="ar-headline" class="text-xs text-[var(--muted)] max-w-2xl"></div>
+        </div>
+        <div class="flex gap-2">
+          <button id="ar-run" onclick="runAgents(false)" class="px-4 py-2 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">▶ Run agents</button>
+          <button onclick="runAgents(true)" class="px-3 py-2 rounded-md text-sm border border-[var(--line)] text-[var(--muted)]">Replay (cached)</button>
+        </div>
+      </div>
+      <!-- pipeline strip -->
+      <div class="flex items-center gap-1 mt-4 overflow-x-auto" id="ar-pipeline"></div>
+    </div>
+    <div id="ar-cards" class="space-y-4"></div>
+  </section>
+
+  <!-- ===== SOURCING ===== -->
+  <section id="tab-sourcing" class="hidden">
+    <div class="panel p-5">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div class="text-sm font-semibold">Sourcing strategy</div>
+          <div class="text-xs text-[var(--muted)]">Pick a part, then choose <span style="color:var(--teal)">cheapest</span> vs <span style="color:var(--cyan)">fastest</span> — the trade-off is computed per part.</div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-[var(--muted)]">Part:</span>
+          <select id="part-select" class="px-3 py-2 rounded-md bg-[var(--panel2)] border border-[var(--line)] text-[var(--txt)] outline-none mono text-xs"></select>
+        </div>
+      </div>
+      <div id="strategy-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"></div>
+      <div id="sourcing-body"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const API = "";                 // same-origin (served by FastAPI)
+const PLANT = {lat:19.07,lng:72.87,name:"Mumbai Plant 1"};
+let SCEN=null, PARTS=[], SUPPLIERS=[], globe=null, lastResult=null;
+let PRODNAME={}, PARTNAME={};
+
+const fmt = n => n>=1e7 ? "₹"+(n/1e7).toFixed(2)+" Cr" : "₹"+(n/1e5).toFixed(1)+" L";
+const riskColor = r => r>=0.7?"var(--red)":r>=0.4?"var(--amber)":"var(--green)";
+
+function tick(){document.getElementById("clock").textContent =
+  new Date().toLocaleTimeString('en-GB',{hour12:false})+" IST"}
+setInterval(tick,1000); tick();
+
+// ---- tabs ----
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  ["control","globe","plant","bom","planning","procure","analytics","agentrun","sourcing"].forEach(id=>
+    document.getElementById("tab-"+id).classList.toggle("hidden", id!==t.dataset.tab));
+  if(t.dataset.tab==="globe" && globe) setTimeout(()=>globe.width(document.getElementById("globe").clientWidth),50);
+  if(t.dataset.tab==="plant"){ loadPlant(); startPlantTicker(); } else { stopPlantTicker(); }
+  if(t.dataset.tab==="sourcing") loadSourceable();
+  if(t.dataset.tab==="bom") loadBom();
+  if(t.dataset.tab==="planning") loadPlanning();
+  if(t.dataset.tab==="procure") loadProcurement();
+  if(t.dataset.tab==="analytics") loadAnalytics();
+  if(t.dataset.tab==="agentrun") initAgentRun();
+});
+
+// ---- init ----
+async function init(){
+  try{
+    SCEN = await (await fetch(API+"/scenario")).json();
+    PARTS = SCEN.parts || [];
+    (SCEN.products||[]).forEach(p=>PRODNAME[p.part_id]=p.part_name);
+    PARTS.forEach(p=>{ if(!PARTNAME[p.part_id]) PARTNAME[p.part_id]=p.part_name; });
+    buildSuppliers();
+    renderKPIs();
+    renderLegend();
+    renderFeed(await (await fetch(API+"/articles")).json());
+    initGlobe();
+  }catch(e){
+    document.getElementById("placeholder").innerHTML =
+      "<div class='text-[var(--red)] text-sm'>Cannot reach backend.</div>"+
+      "<div class='text-xs text-[var(--muted)] mt-2 mono'>Start it with: uvicorn main:app --reload<br>then open http://localhost:8000</div>";
+  }
+}
+
+function buildSuppliers(){
+  const m={};
+  PARTS.forEach(p=>{
+    if(!p.supplier_id || p.part_type==="main_assembly") return;
+    const lat=+p.lat, lng=+p.lon; if(!lat&&!lng) return;
+    const k=p.supplier_id;
+    if(!m[k]) m[k]={id:k,name:p.supplier_name,country:p.country,lat,lng,risk:+p.risk_score||0,parts:new Set()};
+    m[k].risk=Math.max(m[k].risk,+p.risk_score||0); m[k].parts.add(p.part_id);
+  });
+  SUPPLIERS=Object.values(m);
+}
+
+function renderKPIs(){
+  const supl=SUPPLIERS.length;
+  const red=PARTS.filter(p=>+p.risk_score>=0.7 && p.part_type!=="main_assembly").length;
+  const prods=PARTS.filter(p=>p.part_type==="main_assembly").length;
+  const idx=Math.round(Math.max(...PARTS.map(p=>+p.risk_score||0))*100);
+  const cards=[
+    ["Supply Risk Index",idx+"/100","#f3a712"],
+    ["Suppliers monitored",supl,"#38bdf8"],
+    ["Parts red-flagged",red,"#ef4759"],
+    ["Main assemblies",prods,"#2dd4bf"],
+  ];
+  document.getElementById("kpis").innerHTML = cards.map(([l,v,c])=>`
+    <div class="panel p-4">
+      <div class="text-xs text-[var(--muted)] uppercase tracking-wide">${l}</div>
+      <div class="kpi-val text-3xl mt-1" style="color:${c}">${v}</div>
+    </div>`).join("");
+}
+
+function renderLegend(){
+  const el=document.getElementById("model-legend"); if(!el) return;
+  el.innerHTML=`<span class="text-[var(--txt)]">Vehicle models:</span> `+
+    (SCEN.products||[]).map(p=>`<span><span class="mono" style="color:var(--cyan)">${p.part_id}</span> ${p.part_name}</span>`).join("");
+}
+const prodLabel = c => PRODNAME[c] || c;
+
+function renderFeed(arts){
+  document.getElementById("feed").innerHTML = arts.map(a=>`
+    <div class="art p-3 rounded" data-id="${a.id}">
+      <div class="flex justify-between items-center">
+        <span class="mono text-[11px] text-[var(--muted)]">${a.id} · ${a.region}</span>
+        <span class="mono text-[11px] text-[var(--muted)]">${a.date}</span>
+      </div>
+      <div class="text-sm mt-1 leading-snug">${a.headline}</div>
+      <div class="text-[11px] text-[var(--muted)] mt-1">${a.source}</div>
+    </div>`).join("");
+  document.querySelectorAll(".art").forEach(el=>el.onclick=()=>fire(el.dataset.id,el));
+}
+
+// ---- fire an event ----
+async function fire(id,el){
+  document.querySelectorAll(".art").forEach(x=>x.classList.remove("sel"));
+  el.classList.add("sel");
+  document.getElementById("placeholder").classList.add("hidden");
+  const alertB=document.getElementById("alert"), decB=document.getElementById("decision");
+  alertB.classList.remove("hidden"); alertB.classList.add("reveal");
+  alertB.innerHTML=`<div class="text-sm text-[var(--muted)] mono pulse">extracting · propagating · optimizing…</div>`;
+  decB.classList.add("hidden");
+
+  let r; try{ r=await (await fetch(API+"/article/"+id,{method:"POST"})).json(); }
+  catch(e){ alertB.innerHTML=`<div class='text-[var(--red)]'>backend error</div>`; return; }
+  lastResult=r; renderAlert(r); renderDecision(r); updateGlobe(r);
+  if(r.result && r.result.lead_part){ sourceableLoaded=false; showStrategies(r.result.lead_part); }
+}
+
+function renderAlert(r){
+  const ev=r.event, res=r.result;
+  const live = ev.source && ev.source.startsWith("llm");
+  if(typeof res==="string" || !res || !res.affected){
+    document.getElementById("alert").innerHTML=`
+      <div class="flex items-center gap-2 mb-1"><span class="chip" style="background:#10261b;color:var(--green)">NO DISRUPTION</span>
+      <span class="mono text-[11px] text-[var(--muted)]">${ev.source}</span></div>
+      <div class="text-base font-semibold">${r.headline}</div>
+      <div class="text-sm text-[var(--muted)] mt-1">Signal classified as non-disruptive — no action required.</div>`;
+    document.getElementById("decision").classList.add("hidden");
+    return;
+  }
+  const a=res.affected, e=res.exposure;
+  document.getElementById("alert").innerHTML=`
+    <div class="flex items-center gap-2 mb-2">
+      <span class="chip pulse" style="background:#2a1115;color:var(--red)">⚠ ${ev.controlType.toUpperCase()}</span>
+      <span class="chip" style="background:#10212b;color:var(--cyan)">${live?"Qwen + validated":"keyword"}</span>
+      <span class="mono text-[11px] text-[var(--muted)]">risk ${a.max_risk}</span>
+    </div>
+    <div class="text-lg font-bold leading-snug">${r.headline}</div>
+    <div class="flex gap-2 mt-3 flex-wrap text-xs">
+      ${(a.affected_products||[]).map(p=>`<span class="chip" title="${p}" style="background:#101b25;color:var(--txt)">${prodLabel(p)}</span>`).join("")}
+    </div>
+    <div class="grid grid-cols-2 gap-4 mt-4">
+      <div><div class="text-xs text-[var(--muted)]">Exposure</div>
+        <div class="kpi-val text-2xl" style="color:var(--amber)">${fmt(e.exposure_inr)}</div></div>
+      <div><div class="text-xs text-[var(--muted)]">Qty at risk · ${e.horizon_weeks}w</div>
+        <div class="kpi-val text-2xl">${e.qty_at_risk.toLocaleString()}</div></div>
+    </div>`;
+}
+
+function renderDecision(r){
+  const res=r.result, decB=document.getElementById("decision");
+  if(typeof res==="string"||!res||!res.decision||!res.decision.feasible){decB.classList.add("hidden");return;}
+  const d=res.decision;
+  decB.classList.remove("hidden"); decB.classList.add("reveal");
+  const mix=d.mix.map(m=>{
+    const china=/china|ndfeb co|supplier a|rare-earth/i.test(m.supplier);
+    return `<div class="mb-2">
+      <div class="flex justify-between text-sm mb-1"><span>${m.supplier}</span><span class="mono">${m.share_pct}%</span></div>
+      <div class="bar"><i style="width:${m.share_pct}%;background:${china?'var(--red)':'var(--teal)'}"></i></div></div>`;
+  }).join("");
+  decB.innerHTML=`
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold" style="color:var(--teal)">◆ AI-RECOMMENDED ACTION</div>
+      <span class="mono text-[11px] text-[var(--muted)]" title="${res.lead_part}">part ${res.lead_part}${PARTNAME[res.lead_part]?' · '+PARTNAME[res.lead_part]:''}</span>
+    </div>
+    <div class="text-base font-semibold mb-3">Optimal sourcing mix — minimise China dependency</div>
+    ${mix}
+    <div class="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-[var(--line)]">
+      <div><div class="text-xs text-[var(--muted)]">China dependency</div>
+        <div class="kpi-val text-xl"><span style="color:var(--red)">100%</span> <span class="text-[var(--muted)]">&rarr;</span> <span style="color:var(--green)">${d.china_dependency_pct}%</span></div></div>
+      <div><div class="text-xs text-[var(--muted)]">Cost impact</div>
+        <div class="kpi-val text-xl" style="color:var(--amber)">+${d.cost_delta_pct}%</div></div>
+    </div>
+    ${d.relaxed_to_min_china?`<div class="text-[11px] text-[var(--muted)] mt-3 leading-snug">note: ${d.note}</div>`:""}
+    <button onclick="alert('PO recommendation pushed to ERP (mock).')"
+      class="w-full mt-4 py-2.5 rounded-md font-semibold text-sm"
+      style="background:var(--teal-d);color:#eafffb">Push PO to SAP &rarr;</button>`;
+}
+
+// ---- globe ----
+function initGlobe(){
+  if(typeof Globe==="undefined") return;
+  const pts=SUPPLIERS.map(s=>({lat:s.lat,lng:s.lng,name:s.name,risk:s.risk,affected:false}));
+  pts.push({lat:PLANT.lat,lng:PLANT.lng,name:PLANT.name,risk:-1,affected:false});
+  globe=Globe()(document.getElementById("globe"))
+    .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
+    .backgroundColor("rgba(0,0,0,0)")
+    .pointsData(pts).pointLat("lat").pointLng("lng")
+    .pointColor(d=>d.risk<0?"#38bdf8":d.affected?"#ef4759":riskColorHex(d.risk))
+    .pointAltitude(d=>d.affected?0.12:0.045).pointRadius(d=>d.risk<0?0.7:0.45)
+    .pointLabel(d=>`${d.name}${d.risk>=0?" · risk "+d.risk:""}`)
+    .arcsData([]).arcColor(()=>["#2dd4bf","#38bdf8"]).arcDashLength(.5)
+    .arcDashGap(.2).arcDashAnimateTime(1600).arcStroke(.5);
+  globe.pointOfView({lat:25,lng:90,altitude:2.2});
+  globe.controls().autoRotate=true; globe.controls().autoRotateSpeed=.5;
+}
+const riskColorHex = r => r>=0.7?"#ef4759":r>=0.4?"#f3a712":"#34d399";
+
+function updateGlobe(r){
+  if(!globe) return;
+  const res=r.result; const affIds=new Set();
+  if(res&&res.affected){
+    const aparts=new Set(res.affected.affected_parts||[]);
+    PARTS.forEach(p=>{ if(aparts.has(p.part_id)) affIds.add(p.supplier_id); });
+  }
+  const pts=SUPPLIERS.map(s=>({lat:s.lat,lng:s.lng,name:s.name,risk:s.risk,affected:affIds.has(s.id)}));
+  pts.push({lat:PLANT.lat,lng:PLANT.lng,name:PLANT.name,risk:-1,affected:false});
+  globe.pointsData(pts);
+  const arcs=SUPPLIERS.filter(s=>affIds.has(s.id)).map(s=>({
+    startLat:s.lat,startLng:s.lng,endLat:PLANT.lat,endLng:PLANT.lng}));
+  globe.arcsData(arcs).arcColor(()=>["#ef4759","#f3a712"]);
+  const list=SUPPLIERS.filter(s=>affIds.has(s.id));
+  document.getElementById("globe-affected").innerHTML = list.length
+    ? list.map(s=>`<div class="flex justify-between py-1 border-b border-[var(--line)]"><span>${s.name}</span><span class="mono" style="color:${riskColor(s.risk)}">${s.country}</span></div>`).join("")
+    : "No suppliers flagged for this event.";
+}
+
+// ---- sourcing tab: cheapest vs fastest, per part ----
+let sourceableLoaded=false, selectedStrategy=null;
+async function loadSourceable(){
+  const sel=document.getElementById("part-select");
+  if(!sourceableLoaded){
+    let parts; try{ parts=await (await fetch(API+"/parts/sourceable")).json(); }catch(e){ return; }
+    sel.innerHTML=parts.map(p=>`<option value="${p.part_id}">${p.part_id} · ${p.part_name}</option>`).join("");
+    sel.onchange=()=>showStrategies(sel.value);
+    sourceableLoaded=true;
+  }
+  showStrategies(sel.value || (sel.options[0] && sel.options[0].value));
+}
+
+function fmtCr(n){ return "₹"+(n/1e7).toFixed(2)+" Cr"; }
+
+async function showStrategies(partId){
+  if(!partId) return;
+  const sel=document.getElementById("part-select"); if(sel.value!==partId) sel.value=partId;
+  const cards=document.getElementById("strategy-cards");
+  cards.innerHTML=`<div class="text-xs text-[var(--muted)] mono pulse">optimizing…</div>`;
+  let s; try{ s=await (await fetch(API+"/strategies/"+partId)).json(); }catch(e){ cards.innerHTML="error"; return; }
+  selectedStrategy=null;
+  cards.innerHTML=[
+    ["cheapest","LOWEST COST","var(--teal)",s.cheapest],
+    ["fastest","FASTEST · least lead time","var(--cyan)",s.fastest],
+  ].map(([key,label,col,d])=>{
+    if(!d || !d.feasible) return `<div class="panel p-4" style="background:var(--panel2)"><div class="text-sm" style="color:${col}">${label}</div><div class="text-xs text-[var(--muted)] mt-2">No feasible mix.</div></div>`;
+    const bars=d.mix.map(m=>`<div class="mb-2">
+        <div class="flex justify-between text-xs mb-1"><span>${m.supplier} <span class="text-[var(--muted)] mono">${m.country} · ${m.lead_days}d</span></span><span class="mono">${m.share_pct}%</span></div>
+        <div class="bar"><i style="width:${m.share_pct}%;background:${col}"></i></div></div>`).join("");
+    return `<div class="panel p-4" style="background:var(--panel2);border-color:${col}33">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-sm font-semibold" style="color:${col}">${label}</div>
+        <button onclick="chooseStrategy('${key}','${partId}')" class="chip" style="background:${col}22;color:${col};border:none;cursor:pointer">choose</button>
+      </div>
+      ${bars}
+      <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[var(--line)] text-center">
+        <div><div class="text-[10px] text-[var(--muted)]">Cost</div><div class="mono text-sm">${fmtCr(d.total_cost_inr)}</div></div>
+        <div><div class="text-[10px] text-[var(--muted)]">Avg lead</div><div class="mono text-sm">${d.weighted_lead_days}d</div></div>
+        <div><div class="text-[10px] text-[var(--muted)]">China dep</div><div class="mono text-sm" style="color:${d.china_dependency_pct>0?'var(--amber)':'var(--green)'}">${d.china_dependency_pct}%</div></div>
+      </div>
+    </div>`;
+  }).join("");
+  const body=document.getElementById("sourcing-body");
+  if(s.tradeoff){
+    body.innerHTML=`<div class="text-center text-xs text-[var(--muted)] mb-3">
+      Trade-off: paying <span style="color:var(--cyan)">+${s.tradeoff.cost_premium_pct}%</span> buys
+      <span style="color:var(--cyan)">${s.tradeoff.lead_saved_days} days</span> faster delivery.
+      <span id="choice-note" class="ml-2"></span></div>`+optionsTable(partId,s);
+  } else {
+    body.innerHTML=`<div class="text-center text-xs text-[var(--muted)] mb-3">Cheapest and fastest coincide for this part — no trade-off.</div>`+optionsTable(partId,s);
+  }
+}
+
+function optionsTable(partId,s){
+  const opts=PARTS.filter(p=>p.part_id===partId);
+  return `<table><thead><tr><th>Supplier</th><th>Country</th><th>Qual-adj cost</th><th>Lead</th><th>China dep</th><th>Defect</th><th>Risk</th></tr></thead>
+    <tbody>${opts.map(o=>`<tr>
+      <td>${o.supplier_name}</td><td class="mono">${o.country}</td>
+      <td class="mono">₹${(+o.quality_adj_cost_inr).toFixed(2)}</td>
+      <td class="mono">${o.lead_time_days}d</td>
+      <td class="mono" style="color:${+o.china_dependency_pct>0?'var(--red)':'var(--green)'}">${o.china_dependency_pct}%</td>
+      <td class="mono">${(+o.incoming_defect_rate*100).toFixed(1)}%</td>
+      <td><span class="mono" style="color:${riskColor(+o.risk_score)}">${o.risk_score}</span></td>
+    </tr>`).join("")}</tbody></table>`;
+}
+
+function chooseStrategy(key,partId){
+  selectedStrategy=key;
+  const note=document.getElementById("choice-note");
+  if(note) note.innerHTML=`<span class="chip" style="background:#10261f;color:var(--teal)">✓ ${key==='cheapest'?'Lowest cost':'Fastest'} selected — PO staged</span>`;
+  document.querySelectorAll("#strategy-cards .panel").forEach((p,i)=>{
+    const isSel=(key==='cheapest'&&i===0)||(key==='fastest'&&i===1);
+    p.style.boxShadow=isSel?"0 0 0 1.5px var(--teal)":"none";
+  });
+}
+
+// ---- plant floor ----
+let plantLoaded=false;
+let plantTicker=null, liveComplete=1840, liveUnits=3120, liveScanned=0, liveOEE=82.4, defState={};
+function startPlantTicker(){
+  if(plantTicker) return;
+  plantTicker=setInterval(()=>{
+    liveComplete += 1;
+    const c=document.getElementById("liveComplete"); if(c) c.textContent=liveComplete.toLocaleString();
+    liveUnits += 1;
+    const u=document.getElementById("liveUnits"); if(u) u.textContent=liveUnits.toLocaleString();
+    if(Math.random()<0.5){ liveScanned += 1;
+      const s=document.getElementById("liveScanned"); if(s) s.textContent=liveScanned; }
+    const o=document.getElementById("liveOEE");
+    if(o){ const v=(liveOEE+(Math.random()-0.5)*0.3).toFixed(1); o.textContent=v+"%"; }
+    // live incoming-lot inspection counts
+    Object.keys(defState).forEach(sid=>{
+      const d=defState[sid];
+      d.inspected += 1 + Math.floor(Math.random()*2);
+      if(Math.random() < d.rate) d.detected += 1;
+      const di=document.getElementById("det-"+sid); if(di) di.textContent=d.detected;
+      const ii=document.getElementById("insp-"+sid); if(ii) ii.textContent=d.inspected;
+    });
+  }, 2400);   // slow, ~one tick every 2.4s
+}
+function stopPlantTicker(){ if(plantTicker){ clearInterval(plantTicker); plantTicker=null; } }
+const PART_SHAPES = {
+  gear:'<circle cx="24" cy="24" r="12" fill="none" stroke="#3a5564" stroke-width="3"/><circle cx="24" cy="24" r="4" fill="#3a5564"/>',
+  bracket:'<rect x="12" y="14" width="24" height="20" rx="2" fill="none" stroke="#3a5564" stroke-width="3"/>',
+  chip:'<rect x="14" y="14" width="20" height="20" rx="2" fill="none" stroke="#3a5564" stroke-width="3"/><line x1="14" y1="20" x2="8" y2="20" stroke="#3a5564" stroke-width="2"/><line x1="14" y1="28" x2="8" y2="28" stroke="#3a5564" stroke-width="2"/>',
+  magnet:'<path d="M16,34 V20 a8,8 0 0 1 16,0 V34" fill="none" stroke="#3a5564" stroke-width="3"/>'
+};
+function plantClock(){const e=document.getElementById("plant-clock");if(e)e.textContent="REC "+new Date().toLocaleTimeString('en-GB',{hour12:false})}
+setInterval(plantClock,1000);
+
+async function loadPlant(){
+  plantClock();
+  if(plantLoaded) return; plantLoaded=true;
+  try{
+    const p=await (await fetch(API+"/plant")).json();
+    const wq=p.work_queue;
+    document.getElementById("plant-kpis").innerHTML=`
+      <div><span class="text-[var(--muted)]">OEE</span> <span id="liveOEE" class="mono font-semibold" style="color:var(--teal)">${p.oee}%</span></div>
+      <div><span class="text-[var(--muted)]">Complete</span> <span id="liveComplete" class="mono font-semibold" style="color:var(--green)">${wq.complete.toLocaleString()}</span></div>
+      <div><span class="text-[var(--muted)]">In progress</span> <span class="mono font-semibold" style="color:var(--amber)">${wq.in_progress}</span></div>
+      <div><span class="text-[var(--muted)]">Pending</span> <span class="mono font-semibold">${wq.pending}</span></div>`;
+    liveComplete=wq.complete; liveUnits=3120; liveOEE=p.oee;
+    document.getElementById("workq").innerHTML=[
+      ["Complete",wq.complete.toLocaleString(),"var(--green)","100"],
+      ["In progress",wq.in_progress,"var(--amber)","45"],
+      ["Pending",wq.pending,"var(--muted)","12"],
+    ].map(([l,v,c,w])=>`<div>
+      <div class="flex justify-between text-sm mb-1"><span>${l}</span><span class="mono" style="color:${c}">${v}</span></div>
+      <div class="bar"><i style="width:${w}%;background:${c}"></i></div></div>`).join("");
+    document.getElementById("lines").innerHTML=p.lines.map(l=>{
+      const col=l.status==="alert"?"var(--red)":l.status==="idle"?"var(--muted)":"var(--green)";
+      return `<div class="panel p-3">
+        <div class="flex justify-between items-center"><span class="mono font-semibold">${l.id}</span>
+          <span class="w-2 h-2 rounded-full ${l.status==='running'?'pulse':''}" style="background:${col}"></span></div>
+        <div class="text-[11px] text-[var(--muted)] mt-1 h-7 leading-tight">${l.process}</div>
+        <div class="mono text-sm mt-1">Cpk <span style="color:${l.cpk<1.33?'var(--red)':'var(--green)'}">${l.cpk}</span></div>
+        <div class="mono text-[11px] text-[var(--muted)]">FPY ${l.fpy}% · ${l.throughput}/h</div>
+        ${l.top_defect!=="—"?`<div class="mono text-[10px] mt-1" style="color:var(--amber)">${l.top_defect}</div>`:""}
+      </div>`;}).join("");
+
+    const d=await (await fetch(API+"/plant/defects")).json();
+    renderScans(d.scans); renderDefTable(d.suppliers);
+    loadEnergy();
+    startPlantTicker();
+  }catch(e){ document.getElementById("scan-status").textContent="backend unreachable"; }
+}
+
+function renderScans(scans){
+  const shapes=Object.keys(PART_SHAPES);
+  document.getElementById("scangrid").innerHTML=scans.slice(0,12).map((s,i)=>{
+    const shape=PART_SHAPES[shapes[i%shapes.length]];
+    const def=s.verdict==="DEFECT";
+    return `<div class="scan ${def?'def':''}" title="${s.part} · ${s.station}">
+      <svg viewBox="0 0 48 48" width="100%" height="100%">${shape}
+        ${def?`<rect class="defbox" x="0" y="0"/><rect x="14" y="22" width="16" height="12" fill="none" stroke="#ef4759" stroke-width="1.5" rx="1"/>`:""}</svg>
+      <div class="sweep"></div>
+      ${def?`<div class="absolute bottom-0 inset-x-0 text-[8px] text-center mono" style="background:rgba(239,71,89,.85);color:#fff">${s.defect_type}</div>`
+           :`<div class="absolute bottom-0 right-0 text-[8px] mono px-1" style="color:var(--green)">OK</div>`}
+    </div>`;}).join("");
+  const nd=scans.filter(s=>s.verdict==="DEFECT").length;
+  liveScanned=scans.length;
+  document.getElementById("scan-status").innerHTML=`<span id="liveScanned">${scans.length}</span> parts scanned · ${nd} defects flagged · avg conf 0.93`;
+}
+
+function renderDefTable(sup){
+  const top=sup.filter(s=>s.defect_rate_pct>0).slice(0,8);
+  defState={};
+  top.forEach(s=>defState[s.supplier_id]={detected:s.detections,inspected:s.inspected,rate:s.defect_rate_pct/100});
+  document.getElementById("deftable").innerHTML=`<table>
+    <thead><tr><th>Supplier</th><th>Ctry</th><th>Defect rate</th><th>Detected</th><th></th></tr></thead>
+    <tbody>${top.map(s=>{
+      const hot=s.defect_rate_pct>=2.0;
+      return `<tr>
+        <td>${s.supplier}</td><td class="mono">${s.country}</td>
+        <td><span class="mono" style="color:${hot?'var(--red)':'var(--amber)'}">${s.defect_rate_pct}%</span></td>
+        <td class="mono"><span id="det-${s.supplier_id}">${s.detections}</span>/<span id="insp-${s.supplier_id}">${s.inspected}</span></td>
+        <td>${s.supplier_id==='MINDA'||s.supplier_id==='SONA-BLW'
+          ?`<button class="chip" style="background:#10261f;color:var(--teal);border:none;cursor:pointer"
+              onclick="traceDefect('${s.supplier_id}','B-4471')">trace &rarr;</button>`:""}</td>
+      </tr>`;}).join("")}</tbody></table>`;
+}
+
+async function loadEnergy(){
+  let e; try{ e=await (await fetch(API+"/plant/energy")).json(); }catch(_){ return; }
+  document.getElementById("energy-now").textContent=e.current+" "+e.unit;
+  const s=e.series, w=300, h=56, mn=Math.min(...s)-0.05, mx=Math.max(...s)+0.05;
+  const pts=s.map((v,i)=>`${(i/(s.length-1)*w).toFixed(1)},${(h-(v-mn)/(mx-mn)*h).toFixed(1)}`).join(" ");
+  const base=h-(e.baseline-mn)/(mx-mn)*h;
+  document.getElementById("energy-spark").innerHTML=`
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+      <line x1="0" y1="${base.toFixed(1)}" x2="${w}" y2="${base.toFixed(1)}" stroke="#33485a" stroke-dasharray="3 3"/>
+      <polyline points="${pts}" fill="none" stroke="var(--amber)" stroke-width="1.8"/>
+      <text x="2" y="10" font-size="8" fill="#6f8597" font-family="monospace">baseline ${e.baseline}</text>
+    </svg>`;
+  document.getElementById("energy-anom").innerHTML = e.anomaly.flag
+    ? `<span class="chip pulse" style="background:#2a1115;color:var(--red)">⚠ ANOMALY</span> <span class="text-[var(--muted)]">${e.anomaly.detail}</span>`
+    : `<span style="color:var(--green)">Nominal</span>`;
+}
+
+async function askOp(q){
+  if(!q||!q.trim()) return;
+  const box=document.getElementById("op-answer");
+  box.innerHTML=`<span class="mono text-xs text-[var(--muted)] pulse">retrieving SOP · answering…</span>`;
+  let r; try{ r=await (await fetch(API+"/operator",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question:q})})).json(); }
+  catch(e){ box.innerHTML="<span class='text-[var(--red)] text-xs'>error</span>"; return; }
+  box.innerHTML=`<div class="reveal panel p-3" style="background:var(--panel2)">
+    ${r.sop?`<div class="flex items-center gap-2 mb-2"><span class="chip" style="background:#10261f;color:var(--teal)">${r.sop}</span>
+      <span class="text-[11px] text-[var(--muted)]">${r.topic||""}</span>
+      <span class="mono text-[10px] text-[var(--muted)]">${r.source==='llm'?'Qwen · grounded':'RAG · grounded'}</span></div>`:""}
+    <div class="leading-snug">${r.answer}</div></div>`;
+}
+
+// ---- BOM explorer: selectable supplier paths + live rollup ----
+let bomData=null, bomChoice={}, bomLoaded=false;
+async function loadBom(){
+  const sel=document.getElementById("bom-product");
+  if(!bomLoaded){
+    const prods=(SCEN.products||[]).map(p=>p.part_id);
+    sel.innerHTML=prods.map(p=>{
+      const m=(SCEN.products||[]).find(x=>x.part_id===p);
+      return `<option value="${p}">${p} · ${m?m.part_name:''}</option>`;}).join("");
+    sel.onchange=()=>showBom(sel.value);
+    bomLoaded=true;
+  }
+  showBom(sel.value||(sel.options[0]&&sel.options[0].value));
+}
+
+async function showBom(product){
+  const g=document.getElementById("bom-graph");
+  g.innerHTML=`<div class="text-xs text-[var(--muted)] mono pulse">loading BOM…</div>`;
+  try{ bomData=await (await fetch(API+"/bom/"+product)).json(); }catch(e){ g.innerHTML="error"; return; }
+  bomChoice={};
+  // default selection = primary supplier (skip substitute nodes by default)
+  bomData.nodes.forEach(n=>{
+    const prim=n.suppliers.find(s=>s.is_primary)||n.suppliers[0];
+    bomChoice[n.part_id]={sid:prim.supplier_id, active:!n.is_substitute};
+  });
+  renderBom();
+}
+
+function renderBom(){
+  computeBottleneck();
+  const g=document.getElementById("bom-graph");
+  // group by level for a layered layout
+  const byLevel={};
+  bomData.nodes.forEach(n=>{ (byLevel[n.level]=byLevel[n.level]||[]).push(n); });
+  const levels=Object.keys(byLevel).sort();
+  g.innerHTML=`<div class="text-[11px] text-[var(--muted)] mb-2">${bomData.product_name} — ${bomData.nodes.length} nodes · click a supplier path to switch</div>`+
+    levels.map(L=>`
+      <div class="mb-3">
+        <div class="text-[10px] mono text-[var(--muted)] mb-1">LEVEL ${L}</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          ${byLevel[L].map(n=>nodeCard(n)).join("")}
+        </div>
+      </div>`).join("");
+  rollup();
+}
+
+function nodeCard(n){
+  const ch=bomChoice[n.part_id];
+  const multi=n.suppliers.length>1;
+  const paths=n.suppliers.map(s=>{
+    const on=ch.sid===s.supplier_id;
+    return `<div onclick="pickPath('${n.part_id}','${s.supplier_id}')"
+      class="px-2 py-1 rounded mb-1 text-[11px] ${multi?'cursor-pointer':''}"
+      style="border:1px solid ${on?'var(--teal)':'var(--line)'};background:${on?'#10261f':'transparent'}">
+      <div class="flex justify-between"><span>${s.supplier} <span class="text-[var(--muted)]">${s.country}</span></span>
+      <span class="mono" style="color:${on?'var(--teal)':'var(--muted)'}">₹${s.unit_price} · ${s.lead_days}d</span></div>
+    </div>`;}).join("");
+  return `<div class="panel p-2" style="opacity:${ch.active?1:0.45};${n.part_id===bomBottleneck?'border-color:var(--cyan)':''}">
+    <div class="flex justify-between items-center mb-1">
+      <span class="text-xs font-semibold">${n.part_id} <span class="text-[var(--muted)] font-normal">${n.part_name}</span>${n.part_id===bomBottleneck?' <span class="chip" style="background:#10212b;color:var(--cyan)">critical path</span>':''}</span>
+      ${n.is_substitute?`<span class="chip" style="background:#1a2230;color:var(--muted);cursor:pointer" onclick="toggleNode('${n.part_id}')">${ch.active?'on':'off'}</span>`
+        :`<span class="mono text-[10px] text-[var(--muted)]">×${n.qty_per_vehicle}</span>`}
+    </div>
+    ${multi?paths:`<div class="text-[11px] text-[var(--muted)]">${n.suppliers[0].supplier} · ₹${n.suppliers[0].unit_price} · ${n.suppliers[0].lead_days}d</div>`}
+  </div>`;
+}
+
+function pickPath(part,sid){ bomChoice[part].sid=sid; renderBom(); }
+function toggleNode(part){ bomChoice[part].active=!bomChoice[part].active; renderBom(); }
+
+let bomBottleneck=null;
+function computeBottleneck(){
+  let lead=0; bomBottleneck=null;
+  bomData.nodes.forEach(n=>{
+    const ch=bomChoice[n.part_id]; if(!ch.active || n.type==="raw_material") return;
+    const s=n.suppliers.find(x=>x.supplier_id===ch.sid)||n.suppliers[0];
+    if(s.lead_days>lead){ lead=s.lead_days; bomBottleneck=n.part_id; }
+  });
+  return lead;
+}
+function rollup(){
+  let cost=0, chinaCost=0;
+  const lead=computeBottleneck();
+  bomData.nodes.forEach(n=>{
+    const ch=bomChoice[n.part_id]; if(!ch.active) return;
+    const s=n.suppliers.find(x=>x.supplier_id===ch.sid)||n.suppliers[0];
+    const line=n.qty_per_vehicle*s.unit_price;
+    cost+=line; chinaCost+=line*(s.china_dep/100);
+  });
+  document.getElementById("bom-cost").textContent="₹"+Math.round(cost).toLocaleString();
+  document.getElementById("bom-lead").innerHTML=lead+"d "+(bomBottleneck?`<span class='text-[10px] text-[var(--muted)] font-normal'>· ${bomBottleneck}</span>`:"");
+  document.getElementById("bom-china").textContent=(cost?Math.round(100*chinaCost/cost):0)+"%";
+}
+
+function bomAuto(mode){
+  bomData.nodes.forEach(n=>{
+    if(!bomChoice[n.part_id].active) return;
+    const key=mode==='cost'?'unit_price':'lead_days';
+    const best=n.suppliers.reduce((a,b)=>b[key]<a[key]?b:a);
+    bomChoice[n.part_id].sid=best.supplier_id;
+  });
+  renderBom();
+}
+
+// ---- planning & actions ----
+let planningLoaded=false;
+async function loadPlanning(){
+  if(!planningLoaded){
+    const sel=document.getElementById("fc-product");
+    sel.innerHTML=(SCEN.products||[]).map(p=>`<option value="${p.part_id}">${p.part_id} · ${p.part_name}</option>`).join("");
+    sel.onchange=drawForecast;
+    let mtgs; try{ mtgs=await (await fetch(API+"/meetings")).json(); }catch(e){ mtgs=[]; }
+    document.getElementById("mtg-select").innerHTML=mtgs.map(m=>`<option value="${m.id}">${m.title}</option>`).join("");
+    planningLoaded=true;
+  }
+  drawForecast();
+}
+
+let fcScenario="base";
+function setScenario(sc){ fcScenario=sc; drawForecast(); }
+
+async function drawForecast(){
+  const pid=document.getElementById("fc-product").value;
+  document.querySelectorAll(".fc-sc").forEach(b=>b.classList.toggle("on", b.dataset.sc===fcScenario));
+  let f, base; try{
+    f=await (await fetch(API+`/forecast/${pid}?scenario=${fcScenario}`)).json();
+    base=fcScenario==="base"? f : await (await fetch(API+`/forecast/${pid}?scenario=base`)).json();
+  }catch(e){ return; }
+  const hist=f.history, fc=f.forecast;
+  const W=560,H=220,pad=28;
+  const all=[...hist.map(d=>d.qty), ...fc.map(d=>d.upper), ...fc.map(d=>d.lower)];
+  const mn=Math.min(...all)*0.95, mx=Math.max(...all)*1.05;
+  const N=hist.length+fc.length-1, fo=hist.length-1;
+  const X=i=>pad+(i/N)*(W-pad*2);
+  const Y=v=>H-pad-((v-mn)/(mx-mn))*(H-pad*2);
+  const histPts=hist.map((d,i)=>`${X(i).toFixed(1)},${Y(d.qty).toFixed(1)}`).join(" ");
+  const fcLine=fc.map((d,i)=>`${X(fo+i).toFixed(1)},${Y(d.qty).toFixed(1)}`).join(" ");
+  const baseLine=base.forecast.map((d,i)=>`${X(fo+i).toFixed(1)},${Y(d.qty).toFixed(1)}`).join(" ");
+  const bandTop=fc.map((d,i)=>`${X(fo+i).toFixed(1)},${Y(d.upper).toFixed(1)}`);
+  const bandBot=fc.map((d,i)=>`${X(fo+i).toFixed(1)},${Y(d.lower).toFixed(1)}`).reverse();
+  const col=fcScenario==="conservative"?"var(--amber)":fcScenario==="aggressive"?"var(--green)":"var(--teal)";
+  const fill=fcScenario==="conservative"?"rgba(243,167,18,.15)":fcScenario==="aggressive"?"rgba(52,211,153,.13)":"rgba(45,212,191,.14)";
+  document.getElementById("fc-chart").innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+      <line x1="${X(fo)}" y1="${pad}" x2="${X(fo)}" y2="${H-pad}" stroke="#33485a" stroke-dasharray="3 3"/>
+      <text x="${X(fo)+4}" y="${pad+8}" font-size="9" fill="#6f8597" font-family="monospace">now</text>
+      <polygon points="${[...bandTop,...bandBot].join(' ')}" fill="${fill}"/>
+      ${fcScenario!=="base"?`<polyline points="${baseLine}" fill="none" stroke="#5a7184" stroke-width="1.2" stroke-dasharray="2 3"/>`:""}
+      <polyline points="${histPts}" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+      <polyline points="${fcLine}" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="4 3"/>
+    </svg>`;
+  const dv=f.delta_vs_base_pct;
+  document.getElementById("fc-meta").innerHTML=
+    `<span style="color:${col};text-transform:capitalize">${f.scenario}</span> · ${f.total_units.toLocaleString()} units over ${fc.length}w`+
+    (fcScenario!=="base"?` · <span style="color:${dv<0?'var(--amber)':'var(--green)'}">${dv>0?'+':''}${dv}% vs base</span> <span class="text-[var(--muted)]">(grey = base)</span>`:` · trend ${f.trend_per_week}/wk`);
+}
+
+async function extractActions(){
+  const id=document.getElementById("mtg-select").value;
+  const out=document.getElementById("actions-out");
+  out.innerHTML=`<div class="mono text-xs text-[var(--muted)] pulse">extracting actions…</div>`;
+  let r; try{ r=await (await fetch(API+"/actions",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({meeting_id:id})})).json(); }catch(e){ out.innerHTML="error"; return; }
+  out.innerHTML=(r.actions||[]).map(a=>`<div class="panel p-2 reveal" style="background:var(--panel2)">
+    <div class="flex justify-between"><span class="text-sm font-semibold">${a.owner||"—"}</span>
+      ${a.due?`<span class="chip" style="background:#10212b;color:var(--cyan)">${a.due}</span>`:""}</div>
+    <div class="text-xs mt-1">${a.action}</div>
+    ${a.entity?`<span class="chip mt-1 inline-block" style="background:#10261f;color:var(--teal)">${a.entity}</span>`:""}
+  </div>`).join("") || "<div class='text-xs text-[var(--muted)]'>No actions found.</div>";
+}
+
+// ---- procurement plan ----
+function sparkline(vals,w=70,h=20){
+  if(!vals||vals.length<2) return `<span class="text-[var(--muted)] text-[10px]">—</span>`;
+  const mn=Math.min(...vals),mx=Math.max(...vals)||1;
+  const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-(v-mn)/((mx-mn)||1)*h).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="var(--cyan)" stroke-width="1.5"/></svg>`;
+}
+async function loadProcurement(){
+  let p; try{ p=await (await fetch(API+"/procurement")).json(); }catch(e){ return; }
+  document.getElementById("procure-summary").innerHTML=
+    `<span class="text-[var(--muted)]">Pre-stock saving:</span> <span class="mono font-semibold" style="color:var(--green)">₹${(p.buy_total_saving/1e7).toFixed(2)} Cr</span>`;
+  const scarColor=s=>s>=70?"var(--red)":s>=45?"var(--amber)":"var(--green)";
+  document.getElementById("procure-table").innerHTML=`<table>
+    <thead><tr><th>Item</th><th>Commodity</th><th>Usage / mo</th><th>Price now → forecast</th><th>Scarcity</th><th>Action</th><th>Qty to buy</th><th>Why</th></tr></thead>
+    <tbody>${p.items.map(it=>`<tr>
+      <td><span class="font-semibold">${it.part_id}</span><div class="text-[10px] text-[var(--muted)]">${it.part_name}</div></td>
+      <td class="mono text-xs">${it.commodity}</td>
+      <td>${sparkline(it.monthly_usage)}<div class="text-[10px] text-[var(--muted)] mono">${it.monthly_usage.slice(-1)[0]||0}/mo</div></td>
+      <td class="mono text-xs">₹${it.price_now} → ₹${it.price_forecast} <span style="color:${it.price_change_pct>0?'var(--red)':'var(--green)'}">${it.price_change_pct>0?'+':''}${it.price_change_pct}%</span></td>
+      <td><div class="flex items-center gap-1"><div class="bar" style="width:42px"><i style="width:${it.scarcity_index}%;background:${scarColor(it.scarcity_index)}"></i></div><span class="mono text-xs" style="color:${scarColor(it.scarcity_index)}">${it.scarcity_index}</span></div></td>
+      <td>${it.topup?`<span class="chip" style="background:#2a1e10;color:var(--amber)">▲ TOP UP</span>`:`<span class="text-[var(--muted)] text-xs">hold</span>`}</td>
+      <td class="mono">${it.qty_to_buy?it.qty_to_buy.toLocaleString():'—'}</td>
+      <td class="text-[11px] text-[var(--muted)]" style="max-width:220px">${it.explanation}</td>
+    </tr>`).join("")}</tbody></table>`;
+  document.getElementById("buy-list").innerHTML = p.buy_list.length?`<table>
+    <thead><tr><th>Item</th><th>Supplier</th><th>Qty</th><th>Unit ₹</th><th>Line cost</th><th>Est. saving</th></tr></thead>
+    <tbody>${p.buy_list.map(b=>`<tr>
+      <td><span class="font-semibold">${b.part_id}</span> <span class="text-[var(--muted)] text-xs">${b.part_name}</span></td>
+      <td class="text-xs">${b.supplier}</td>
+      <td class="mono">${b.qty.toLocaleString()}</td>
+      <td class="mono text-xs">₹${b.unit_price}</td>
+      <td class="mono">₹${(b.line_cost/1e7).toFixed(2)} Cr</td>
+      <td class="mono" style="color:var(--green)">₹${(b.est_saving/1e5).toFixed(1)} L</td>
+    </tr>`).join("")}
+    <tr style="border-top:2px solid var(--line)"><td colspan="4" class="font-semibold">Total</td>
+      <td class="mono font-semibold">₹${(p.buy_total_cost/1e7).toFixed(2)} Cr</td>
+      <td class="mono font-semibold" style="color:var(--green)">₹${(p.buy_total_saving/1e7).toFixed(2)} Cr</td></tr>
+    </tbody></table>
+    <button onclick="alert('Buy plan pushed to ERP (mock).')" class="mt-3 px-4 py-2 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">Push buy plan to SAP →</button>`
+    :`<div class="text-xs text-[var(--muted)]">No pre-stock recommended — prices stable, sourcing adequate.</div>`;
+}
+
+// ---- analytics deep-dives ----
+let analyticsLoaded=false;
+async function loadAnalytics(){
+  if(!analyticsLoaded){
+    let lines; try{ lines=(await (await fetch(API+"/plant")).json()).lines; }catch(e){ lines=[]; }
+    const lopts=lines.map(l=>`<option value="${l.id}">${l.id} · ${l.process}</option>`).join("");
+    const cl=document.getElementById("cpk-line"), yl=document.getElementById("yield-line");
+    cl.innerHTML=lopts; cl.value="L2"; cl.onchange=drawCpk;
+    yl.innerHTML=lopts; yl.value="L2"; yl.onchange=drawYield;
+    const sup=[...new Map(SUPPLIERS.map(s=>[s.id,s])).values()];
+    const sc=document.getElementById("sc-supplier");
+    sc.innerHTML=sup.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+    sc.onchange=drawScorecard;
+    analyticsLoaded=true;
+  }
+  drawCpk(); drawYield(); drawScorecard(); drawPOs();
+}
+
+async function drawCpk(){
+  const id=document.getElementById("cpk-line").value;
+  let d; try{ d=await (await fetch(API+"/cpk/"+id)).json(); }catch(e){ return; }
+  const all=[...d.history,...d.forecast], W=300,H=150,pad=24;
+  const mn=Math.min(...all,1.0)-0.1, mx=Math.max(...all,1.7)+0.1;
+  const X=i=>pad+(i/(all.length-1))*(W-pad*2), Y=v=>H-pad-((v-mn)/(mx-mn))*(H-pad*2);
+  const hp=d.history.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const fo=d.history.length-1;
+  const fp=d.forecast.map((v,i)=>`${X(fo+i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  document.getElementById("cpk-chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+    <line x1="${pad}" y1="${Y(1.33).toFixed(1)}" x2="${W-pad}" y2="${Y(1.33).toFixed(1)}" stroke="var(--red)" stroke-dasharray="3 3" opacity=".6"/>
+    <text x="${pad}" y="${Y(1.33)-3}" font-size="8" fill="var(--red)" font-family="monospace">1.33 acceptance</text>
+    <line x1="${pad}" y1="${Y(1.67).toFixed(1)}" x2="${W-pad}" y2="${Y(1.67).toFixed(1)}" stroke="#34557a" stroke-dasharray="2 3" opacity=".5"/>
+    <line x1="${X(fo)}" y1="${pad}" x2="${X(fo)}" y2="${H-pad}" stroke="#33485a" stroke-dasharray="2 2"/>
+    <polyline points="${hp}" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+    <polyline points="${fp}" fill="none" stroke="${d.breach?'var(--red)':'var(--green)'}" stroke-width="1.8" stroke-dasharray="4 3"/>
+  </svg>`;
+  document.getElementById("cpk-meta").innerHTML=
+    `<div class="grid grid-cols-3 gap-2 text-center text-xs">
+      <div><div class="text-[var(--muted)]">Cpk now</div><div class="mono text-lg">${d.cpk}</div></div>
+      <div><div class="text-[var(--muted)]">4-step forecast</div><div class="mono text-lg" style="color:${d.breach?'var(--red)':'var(--green)'}">${d.forecast_cpk}</div></div>
+      <div><div class="text-[var(--muted)]">Action</div><div class="text-[11px] mt-1">${d.action}</div></div>
+    </div>`;
+}
+
+async function drawYield(){
+  const id=document.getElementById("yield-line").value;
+  let d; try{ d=await (await fetch(API+"/yield/"+id)).json(); }catch(e){ return; }
+  let running=d.baseline; const rows=[{label:"Baseline",val:d.baseline,delta:0}];
+  d.steps.forEach(s=>{ running+=s.delta; rows.push({label:s.label,val:running,delta:s.delta}); });
+  rows.push({label:"Current",val:d.current,delta:0});
+  const mx=d.baseline*1.02, mn=d.current*0.97;
+  document.getElementById("yield-chart").innerHTML=`<div class="space-y-1">`+rows.map(r=>{
+    const w=((r.val-mn)/(mx-mn))*100;
+    const col=r.delta<0?"var(--red)":r.label==="Current"?"var(--amber)":"var(--teal)";
+    return `<div class="flex items-center gap-2 text-xs">
+      <span style="width:80px" class="text-[var(--muted)]">${r.label}</span>
+      <div class="flex-1 bar"><i style="width:${w.toFixed(0)}%;background:${col}"></i></div>
+      <span class="mono" style="width:64px;text-align:right">${r.val.toFixed(1)}%${r.delta?` <span style="color:var(--red)">${r.delta}</span>`:''}</span>
+    </div>`;}).join("")+`</div>`;
+  document.getElementById("yield-summary").innerHTML=`<span class="chip" style="background:#10212b;color:var(--cyan)">AI</span> ${d.summary}`;
+}
+
+async function drawScorecard(){
+  const id=document.getElementById("sc-supplier").value;
+  let d; try{ d=await (await fetch(API+"/scorecard/"+id)).json(); }catch(e){ return; }
+  if(d.error){ document.getElementById("scorecard").innerHTML="<div class='text-xs text-[var(--muted)]'>n/a</div>"; return; }
+  const gradeCol=d.composite>=78?"var(--green)":d.composite>=65?"var(--amber)":"var(--red)";
+  const arrow=(now,prev,goodUp=true)=>{
+    const up=now>=prev, good=goodUp?up:!up;
+    return `<span style="color:${good?'var(--green)':'var(--red)'}">${up?'▲':'▼'}</span> <span class="text-[10px] text-[var(--muted)]">from ${prev}</span>`;
+  };
+  // radar chart over the 6 dims
+  const dims=Object.entries(d.dims), N=dims.length, R=58, cx=80, cy=80;
+  const pt=(i,val)=>{ const a=-Math.PI/2 + i*2*Math.PI/N, r=R*val/100;
+    return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; };
+  const grid=[100,66,33].map(g=>`<polygon points="${dims.map((_,i)=>pt(i,g).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#1d2b38" stroke-width="1"/>`).join("");
+  const axes=dims.map((_,i)=>{const[x,y]=pt(i,100);return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#1d2b38" stroke-width="1"/>`;}).join("");
+  const poly=`<polygon points="${dims.map((d2,i)=>pt(i,d2[1]).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="rgba(45,212,191,.22)" stroke="var(--teal)" stroke-width="1.6"/>`;
+  const labels=dims.map((d2,i)=>{const[x,y]=pt(i,128);return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="8" fill="#6f8597" text-anchor="middle" font-family="monospace">${d2[0]}</text>`;}).join("");
+  const vf=d.vs_field;
+  const cell=(a,b,goodLow=true)=>{const better=goodLow?a<=b:a>=b;return `<span class="mono" style="color:${better?'var(--green)':'var(--red)'}">${a}</span> <span class="text-[var(--muted)] text-[10px]">vs ${b}</span>`;};
+  document.getElementById("scorecard").innerHTML=`
+    <div class="flex items-start gap-3 mb-3">
+      <div class="text-center"><div class="kpi-val text-3xl" style="color:${gradeCol}">${d.grade}</div><div class="text-[10px] text-[var(--muted)]">${d.composite}/100</div></div>
+      <svg viewBox="0 0 160 175" width="160" height="175">${grid}${axes}${poly}${labels}</svg>
+    </div>
+    <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+      <div><div class="text-[var(--muted)]">OTIF</div><div class="mono">${d.otif}% ${arrow(d.otif,d.otif_prev,true)}</div></div>
+      <div><div class="text-[var(--muted)]">Altman-Z</div><div class="mono">${d.altman_z} ${arrow(d.altman_z,d.altman_prev,true)}</div></div>
+      <div><div class="text-[var(--muted)]">Should-cost</div><div class="mono" style="color:${d.should_cost_pct>0?'var(--red)':'var(--green)'}">${d.should_cost_pct>0?'+':''}${d.should_cost_pct}%</div></div>
+    </div>
+    <div class="text-[11px] font-semibold mb-1">vs field average <span class="text-[var(--muted)] font-normal">· part ${d.part}</span></div>
+    <table class="text-xs"><tbody>
+      <tr><td class="text-[var(--muted)] py-1">Quote</td><td class="py-1">${cell('₹'+vf.quote,'₹'+vf.field_quote)}</td></tr>
+      <tr><td class="text-[var(--muted)] py-1">Lead time</td><td class="py-1">${cell(vf.lead+'d',vf.field_lead+'d')}</td></tr>
+      <tr><td class="text-[var(--muted)] py-1">Defect rate</td><td class="py-1">${cell(vf.defect_pct+'%',vf.field_defect_pct+'%')}</td></tr>
+    </tbody></table>
+    <div class="text-[10px] text-[var(--muted)] mt-2">Quality/delivery from data; Altman-Z &amp; should-cost are illustrative composites (production: financial-health ML).</div>`;
+}
+
+async function drawPOs(){
+  let d; try{ d=await (await fetch(API+"/po-forecast")).json(); }catch(e){ return; }
+  document.getElementById("po-summary").textContent=`${d.open} open POs · ${d.at_risk} at risk of slip`;
+  const col=s=>s==="RED"?"var(--red)":s==="AMBER"?"var(--amber)":"var(--green)";
+  document.getElementById("po-table").innerHTML=`<table>
+    <thead><tr><th>PO</th><th>Part</th><th>Supplier</th><th>Value</th><th>P(slip)</th></tr></thead>
+    <tbody>${d.pos.map(p=>`<tr>
+      <td class="mono text-xs">${p.po}</td>
+      <td class="text-xs">${p.part}</td>
+      <td class="text-xs">${p.supplier}</td>
+      <td class="mono text-xs">₹${(p.value_inr/1e5).toFixed(1)}L</td>
+      <td><div class="flex items-center gap-1"><div class="bar" style="width:40px"><i style="width:${p.slip_prob*100}%;background:${col(p.status)}"></i></div><span class="mono text-xs" style="color:${col(p.status)}">${Math.round(p.slip_prob*100)}%</span></div></td>
+    </tr>`).join("")}</tbody></table>`;
+}
+
+// ---- agentic run ----
+const AR_STEPS=[
+  {key:"signal",  label:"Signal"},
+  {key:"risk",    label:"Risk"},
+  {key:"rejection",label:"Rejection"},
+  {key:"defect",  label:"Defect"},
+  {key:"bottleneck",label:"Bottleneck"},
+  {key:"options", label:"Options"},
+  {key:"decision",label:"Decision"},
+  {key:"stock",   label:"Stock"},
+  {key:"impact",  label:"Impact"},
+];
+let arCache={};
+function initAgentRun(){
+  document.getElementById("ar-headline").textContent=
+    "China widens rare-earth export licensing; neodymium magnet supply tightens — watch six agents reason from this single signal to a grounded action.";
+  renderPipeline(-1);
+  if(!document.getElementById("ar-cards").innerHTML) document.getElementById("ar-cards").innerHTML=
+    `<div class="text-xs text-[var(--muted)] panel p-4">Press <b>Run agents</b>. Each agent makes a live Qwen call (a few seconds each on CPU) and lights up as it finishes.</div>`;
+}
+function renderPipeline(active){
+  document.getElementById("ar-pipeline").innerHTML=AR_STEPS.map((s,i)=>{
+    const st=i<active?"done":i===active?"run":"idle";
+    const bg=st==="done"?"var(--teal-d)":st==="run"?"var(--amber)":"var(--panel2)";
+    const cl=st==="done"?"#eafffb":st==="run"?"#1a1206":"var(--muted)";
+    return `<div class="flex items-center">
+      <div class="px-3 py-1.5 rounded-md text-xs font-semibold ${st==='run'?'pulse':''}" style="background:${bg};color:${cl};white-space:nowrap">${i+1}. ${s.label}</div>
+      ${i<AR_STEPS.length-1?`<div style="width:18px;height:2px;background:${i<active?'var(--teal-d)':'var(--line)'}"></div>`:""}
+    </div>`;}).join("");
+}
+async function runAgents(useCache){
+  const btn=document.getElementById("ar-run"); btn.disabled=true; btn.textContent="running…";
+  document.getElementById("ar-cards").innerHTML="";
+  for(let i=0;i<AR_STEPS.length;i++){
+    renderPipeline(i);
+    const key=AR_STEPS[i].key;
+    let d;
+    if(useCache && arCache[key]){ d=arCache[key]; await new Promise(r=>setTimeout(r,250)); }
+    else { try{ d=await (await fetch(API+"/agent/"+key)).json(); arCache[key]=d; }catch(e){ d={error:1}; } }
+    document.getElementById("ar-cards").insertAdjacentHTML("beforeend", arCard(key,d));
+  }
+  renderPipeline(AR_STEPS.length);
+  btn.disabled=false; btn.textContent="▶ Run agents";
+}
+function srcBadge(s){ return `<span class="chip" style="background:${s==='qwen'?'#10261f':'#26210f'};color:${s==='qwen'?'var(--teal)':'var(--amber)'}">${s==='qwen'?'Qwen':'fallback'}</span>`; }
+function arCard(key,d){
+  const head=(n,extra="")=>`<div class="flex items-center justify-between mb-2"><div class="text-sm font-semibold">${n}</div>${extra}</div>`;
+  if(d.error) return `<div class="panel p-4 reveal text-xs text-[var(--muted)]">agent ${key} unavailable</div>`;
+  if(key==="signal"){ const o=d.ocr||{};
+    return `<div class="panel p-4 reveal">${head("① Signal agent — OCR intake",srcBadge(d.source))}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+      <div>
+        <div class="text-[10px] text-[var(--muted)] uppercase mb-1">news clipping (image input)</div>
+        <img src="${API}/sample-news.png" alt="news" style="width:100%;border:1px solid var(--line);border-radius:6px"/>
+      </div>
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-[10px] text-[var(--muted)] uppercase">OCR extracted text</span>
+          <span class="chip" style="background:${o.source==='tesseract'?'#10261f':'#26210f'};color:${o.source==='tesseract'?'var(--teal)':'var(--amber)'}">${o.source==='tesseract'?'Tesseract OCR · '+o.chars+' chars':'cached text'}</span>
+        </div>
+        <div class="text-[11px] text-[var(--muted)] mono p-2 rounded" style="background:var(--panel2);max-height:120px;overflow:auto">${o.excerpt||''}…</div>
+        <div class="flex gap-2 flex-wrap mt-2 text-xs">
+          <span class="chip" style="background:#1a1414;color:var(--red)">${d.event.material}</span>
+          <span class="chip" style="background:#101b25;color:var(--cyan)">${d.event.region}</span>
+          <span class="chip" style="background:#101b25;color:var(--cyan)">${d.event.commodity}</span>
+          <span class="chip" style="background:#26210f;color:var(--amber)">severity: ${d.event.severity}</span></div>
+      </div>
+    </div>
+    <div class="text-sm">${d.note}</div></div>`; }
+  if(key==="risk"){ const mx=Math.max(...d.scores.map(s=>s.risk));
+    return `<div class="panel p-4 reveal">${head("② Risk agent",srcBadge(d.source))}
+    <div class="space-y-1 mb-2">${d.scores.map(s=>`<div class="flex items-center gap-2 text-xs">
+      <span style="width:90px">${s.name} <span class="text-[var(--muted)]">${s.country}</span></span>
+      <div class="flex-1 bar"><i style="width:${s.risk/mx*100}%;background:${s.risk>=60?'var(--red)':s.risk>=35?'var(--amber)':'var(--green)'}"></i></div>
+      <span class="mono" style="width:30px">${s.risk}</span>
+      ${s.china?`<span class="chip" style="background:#1a1414;color:var(--red)">CN ${s.china}%</span>`:''}</div>`).join("")}</div>
+    <div class="text-sm">${d.note}</div></div>`; }
+  if(key==="defect") return `<div class="panel p-4 reveal" style="border-color:var(--amber)">${head("③ Defect agent — closed loop",srcBadge(d.source))}
+    <div class="text-xs text-[var(--muted)] mb-2">${d.supplier}: ${d.note_text}</div>
+    <div class="flex items-center gap-3 mb-2 text-sm">
+      <span class="chip" style="background:#1a1414;color:var(--red)">defect ${d.rate_pct}%</span>
+      <span class="mono">qual-adj cost ₹${d.qadj_before} <span style="color:var(--red)">→ ₹${d.qadj_after} (+₹${d.delta})</span></span></div>
+    <div class="text-sm">${d.note}</div></div>`;
+  if(key==="options"){ const col=v=>v==="DO"?"var(--green)":v==="DON'T"?"var(--red)":"var(--amber)";
+    return `<div class="panel p-4 reveal">${head("④ Options agent — do / don't + why",srcBadge(d.source))}
+    <div class="space-y-2">${d.options.map(o=>`<div class="panel p-2" style="background:var(--panel2)">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-semibold">${o.action} <span class="text-[var(--muted)] font-normal">· ${o.target}</span></span>
+        <span class="chip" style="background:${col(o.verdict)}22;color:${col(o.verdict)};border:1px solid ${col(o.verdict)}">${o.verdict}</span></div>
+      <div class="text-xs text-[var(--muted)]">${o.reason}</div>
+      <div class="text-[10px] mono mt-1" style="color:var(--cyan)">${o.metric}</div></div>`).join("")}</div>
+    <div class="text-sm mt-2"><span class="chip" style="background:#10261f;color:var(--teal)">recommendation</span> ${d.summary}</div></div>`; }
+  if(key==="decision") return `<div class="panel p-4 reveal">${head("⑤ Decision agent — grounded mix",srcBadge(d.source))}
+    <div class="space-y-1 mb-2">${d.mix.map(m=>`<div class="flex items-center gap-2 text-xs">
+      <span style="width:90px">${m.name} <span class="text-[var(--muted)]">${m.country}</span></span>
+      <div class="flex-1 bar"><i style="width:${m.pct}%;background:${m.country==='CN'?'var(--red)':'var(--teal)'}"></i></div>
+      <span class="mono" style="width:42px">${m.pct}%</span></div>`).join("")}</div>
+    <div class="flex gap-3 text-xs mb-2"><span class="mono">China dependency: <b style="color:${d.china_pct>40?'var(--red)':'var(--green)'}">${d.china_pct}%</b></span>
+      <span class="mono text-[var(--muted)]">demand ${d.demand.toLocaleString()} u</span></div>
+    <div class="text-sm">${d.note}</div></div>`;
+  if(key==="rejection"){
+    const vcol=v=>v==="REJECTED"?"var(--red)":v==="ACCEPTED"?"var(--green)":"var(--amber)";
+    const dimKeys=Object.keys(d.rows[0].dims);
+    // small radar per supplier + a flagged scorecard table, side by side
+    const radar=(dims)=>{const N=dimKeys.length,R=34,cx=42,cy=42;
+      const pt=(i,val)=>{const a=-Math.PI/2+i*2*Math.PI/N,r=R*val/100;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+      const grid=`<polygon points="${dimKeys.map((_,i)=>pt(i,100).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#1d2b38"/>`;
+      const poly=`<polygon points="${dimKeys.map((k,i)=>pt(i,dims[k]).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="rgba(243,167,18,.25)" stroke="var(--amber)" stroke-width="1.4"/>`;
+      return `<svg viewBox="0 0 84 84" width="84" height="84">${grid}${poly}</svg>`;};
+    return `<div class="panel p-4 reveal">${head("③ Rejection agent — why each supplier was scored")}
+    <div class="text-xs text-[var(--muted)] mb-2">Concern per dimension (higher = worse). Flags trip at 65. Radar + scorecard side by side.</div>
+    <table class="text-xs"><thead><tr><th>Supplier</th><th>Profile</th>${dimKeys.map(k=>`<th>${k}</th>`).join("")}<th>Verdict</th></tr></thead>
+    <tbody>${d.rows.map(r=>`<tr>
+      <td><span class="font-semibold">${r.name}</span><div class="text-[10px] text-[var(--muted)]">${r.country}</div></td>
+      <td>${radar(r.dims)}</td>
+      ${dimKeys.map(k=>{const v=r.dims[k];const hot=v>=65;return `<td class="mono" style="color:${hot?'var(--red)':'var(--muted)'}">${v}${hot?' ⚑':''}</td>`;}).join("")}
+      <td><span class="chip" style="background:${vcol(r.verdict)}22;color:${vcol(r.verdict)};border:1px solid ${vcol(r.verdict)}">${r.verdict}</span><div class="text-[10px] text-[var(--muted)] mt-1" style="max-width:150px">${r.reason}</div></td>
+    </tr>`).join("")}</tbody></table></div>`;
+  }
+  if(key==="bottleneck"){
+    const W=560,H=240;
+    // layered layout: part (left) -> suppliers (mid) -> regions (right)
+    const parts=d.nodes.filter(n=>n.type==="part"), sups=d.nodes.filter(n=>n.type==="supplier"), regs=d.nodes.filter(n=>n.type==="region");
+    const place={}; 
+    parts.forEach((n,i)=>place[n.id]=[70,H/2]);
+    sups.forEach((n,i)=>place[n.id]=[W/2,40+i*(H-80)/(sups.length-1||1)]);
+    regs.forEach((n,i)=>place[n.id]=[W-70,60+i*(H-120)/(regs.length-1||1)]);
+    const ncol=s=>s==="bottleneck"?"var(--amber)":s==="rejected"?"var(--red)":"var(--teal)";
+    const lines=d.links.map(l=>{const a=place[l.from],b=place[l.to];if(!a||!b)return"";return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#27384a" stroke-width="1"/>`;}).join("");
+    const circles=d.nodes.map(n=>{const p=place[n.id];if(!p)return"";const r=n.type==="part"?13:n.type==="supplier"?10:8;
+      return `<g><circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${ncol(n.status)}22" stroke="${ncol(n.status)}" stroke-width="1.6"/>
+      <text x="${p[0]}" y="${p[1]+(n.type==='region'?-12:r+11)}" font-size="9" fill="#9fb2c0" text-anchor="middle" font-family="monospace">${n.label}</text>
+      ${n.status==='rejected'?`<text x="${p[0]}" y="${p[1]+3}" font-size="11" fill="var(--red)" text-anchor="middle">✕</text>`:''}
+      ${n.status==='bottleneck'?`<text x="${p[0]}" y="${p[1]+3}" font-size="10" fill="var(--amber)" text-anchor="middle">!</text>`:''}</g>`;}).join("");
+    const covered=Math.min(100,Math.round(100*d.nonchina_capacity/d.demand));
+    return `<div class="panel p-4 reveal" style="border-color:var(--amber)">${head("⑤ Bottleneck agent — network & actions",srcBadge(d.source))}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div class="lg:col-span-2"><svg viewBox="0 0 ${W} ${H}" width="100%">${lines}${circles}</svg>
+        <div class="flex gap-3 text-[10px] text-[var(--muted)] mt-1"><span>● <span style="color:var(--teal)">ok</span></span><span>● <span style="color:var(--amber)">bottleneck</span></span><span>● <span style="color:var(--red)">rejected</span></span></div></div>
+      <div>
+        <div class="text-xs mb-2">Non-China capacity covers <b style="color:${covered<100?'var(--red)':'var(--green)'}">${covered}%</b> of demand${d.gap>0?` — short <b style="color:var(--red)">${d.gap.toLocaleString()}</b> units`:''}.</div>
+        ${d.actions.map(a=>`<div class="panel p-2 mb-2" style="background:var(--panel2)">
+          <div class="flex justify-between"><span class="text-xs font-semibold">${a.action}</span><span class="chip" style="background:${a.priority==='HIGH'?'#2a1414':'#26210f'};color:${a.priority==='HIGH'?'var(--red)':'var(--amber)'}">${a.priority}</span></div>
+          <div class="text-[11px] text-[var(--muted)] mt-1">${a.detail}</div></div>`).join("")}
+      </div>
+    </div>
+    <div class="text-sm mt-2">${d.note}</div></div>`;
+  }
+  if(key==="stock"){
+    return `<div class="panel p-4 reveal">${head("⑧ Stock agent — pre-buy ahead of events",srcBadge(d.source))}
+    <table class="text-xs"><thead><tr><th>Item</th><th>Driver</th><th>Price ▲</th><th>Lead</th><th>Action</th></tr></thead>
+    <tbody>${d.items.map(i=>`<tr>
+      <td><span class="font-semibold">${i.item}</span> <span class="text-[var(--muted)]">${i.commodity}</span></td>
+      <td class="text-[11px] text-[var(--muted)]" style="max-width:200px">${i.event} <span class="chip" style="background:${i.severity==='high'?'#2a1414':i.severity==='medium'?'#26210f':'#10212b'};color:${i.severity==='high'?'var(--red)':i.severity==='medium'?'var(--amber)':'var(--cyan)'}">${i.severity}</span></td>
+      <td class="mono" style="color:var(--red)">+${i.price_rise_pct}%</td>
+      <td class="mono text-[var(--muted)]">${i.lead_weeks}w</td>
+      <td>${i.topup?`<span class="chip" style="background:#2a1e10;color:var(--amber)">▲ STOCK ${i.cover_weeks}w</span>`:`<span class="text-[var(--muted)]">hold</span>`}</td>
+    </tr>`).join("")}</tbody></table>
+    <div class="text-sm mt-2">${d.note}</div></div>`;
+  }
+  if(key==="impact"){ const t=d.tiles;
+    const tile=(lab,val,sub,col)=>`<div class="panel p-3 text-center" style="background:var(--panel2)">
+      <div class="text-[10px] text-[var(--muted)] uppercase">${lab}</div>
+      <div class="kpi-val text-xl" style="color:${col}">${val}</div>
+      <div class="text-[10px] text-[var(--muted)]">${sub}</div></div>`;
+    return `<div class="panel p-4 reveal" style="border-color:var(--teal)">${head("⑥ Impact agent — what we saved",srcBadge(d.source))}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      ${tile("Cost avoided","₹"+(t.cost_saved_inr/1e7).toFixed(2)+" Cr","disruption premium","var(--green)")}
+      ${tile("Manpower","₹"+(t.manpower_inr/1e5).toFixed(1)+" L",t.manpower_hours+" h · "+t.fte_months+" FTE-mo","var(--cyan)")}
+      ${tile("Energy","₹"+(t.energy_inr/1e3).toFixed(0)+"k",t.energy_kwh.toLocaleString()+" kWh","var(--amber)")}
+      ${tile("China dep.",t.china_after+"%","from "+t.china_before+"%","var(--teal)")}
+    </div>
+    <div class="flex items-center gap-2 mb-2 text-xs">
+      <span style="width:70px" class="text-[var(--muted)]">China dep.</span>
+      <div class="flex-1 bar" style="height:14px"><i style="width:${t.china_before}%;background:var(--red)"></i></div><span class="mono">${t.china_before}%</span></div>
+    <div class="flex items-center gap-2 mb-3 text-xs">
+      <span style="width:70px" class="text-[var(--muted)]">after</span>
+      <div class="flex-1 bar" style="height:14px"><i style="width:${t.china_after}%;background:var(--teal)"></i></div><span class="mono">${t.china_after}%</span></div>
+    <div class="text-[10px] text-[var(--muted)] uppercase mb-1">Before → After improvement</div>
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      ${[["China dep %",t.china_before,t.china_after,true],
+         ["Risk exposure",82,28,true],
+         ["Supply coverage %",72,100,false]].map(([lab,b,a,lowerBetter])=>{
+        const mx=Math.max(b,a,100); const good=lowerBetter?a<b:a>b;
+        return `<div><div class="text-[10px] text-[var(--muted)] mb-1">${lab}</div>
+          <div class="flex items-end gap-2" style="height:60px">
+            <div class="flex-1 flex flex-col items-center justify-end h-full"><div style="width:100%;height:${b/mx*100}%;background:#5a7184;border-radius:3px 3px 0 0"></div><span class="text-[9px] text-[var(--muted)] mt-0.5">${b}</span></div>
+            <div class="flex-1 flex flex-col items-center justify-end h-full"><div style="width:100%;height:${a/mx*100}%;background:${good?'var(--teal)':'var(--amber)'};border-radius:3px 3px 0 0"></div><span class="text-[9px] mt-0.5" style="color:${good?'var(--teal)':'var(--amber)'}">${a}</span></div>
+          </div>
+          <div class="flex gap-2 text-[9px] text-[var(--muted)] mt-0.5"><span class="flex-1 text-center">before</span><span class="flex-1 text-center">after</span></div></div>`;
+      }).join("")}
+    </div>
+    <div class="text-sm"><span class="chip" style="background:#10261f;color:var(--teal)">net benefit ₹${(t.total_inr/1e7).toFixed(2)} Cr</span> ${d.note}</div></div>`; }
+  return "";
+}
+
+// ---- one-shot visual fault detection ----
+let osLoaded=false;
+function toggleOneshot(){
+  const b=document.getElementById("os-body"), c=document.getElementById("os-caret");
+  const open=b.classList.toggle("hidden")===false;
+  c.textContent=open?"▾":"▸";
+  if(open && !osLoaded) initOneshot();
+}
+async function initOneshot(){
+  document.getElementById("os-ref").src=API+"/parts/ref.png";
+  let samples; try{ samples=await (await fetch(API+"/vision/samples")).json(); }catch(e){ samples=[]; }
+  document.getElementById("os-samples").innerHTML=samples.map((s,i)=>
+    `<button onclick="inspectPart('${s.id}')" class="px-2 py-1.5 rounded text-xs text-left border border-[var(--line)] ${i===0?'os-sel':''}" data-sid="${s.id}" style="background:var(--panel2)">${s.name}</button>`).join("");
+  osLoaded=true;
+  inspectPart(samples.length?samples[1].id:"defect_burr");  // default to a defect so it's illustrative
+}
+async function inspectPart(sid){
+  document.querySelectorAll("#os-samples button").forEach(b=>b.style.borderColor=b.dataset.sid===sid?"var(--teal)":"var(--line)");
+  document.getElementById("os-test").src=API+"/parts/"+sid+".png";
+  let r; try{ r=await (await fetch(API+"/vision/inspect/"+sid)).json(); }catch(e){ return; }
+  document.getElementById("os-name").textContent=r.name?("· "+r.name):"";
+  const box=document.getElementById("os-box");
+  if(r.box){ box.classList.remove("hidden");
+    box.style.left=r.box.x+"%"; box.style.top=r.box.y+"%"; box.style.width=r.box.w+"%"; box.style.height=r.box.h+"%";
+  } else box.classList.add("hidden");
+  const fail=r.verdict==="FAIL", col=fail?"var(--red)":"var(--green)";
+  document.getElementById("os-verdict").innerHTML=`
+    <div class="kpi-val text-2xl" style="color:${col}">${r.verdict}</div>
+    <div class="text-[10px] text-[var(--muted)] mb-2">vs golden reference</div>
+    <div class="text-xs mono">anomaly area<br><span class="text-lg" style="color:${col}">${r.score}%</span></div>
+    <div class="text-[10px] text-[var(--muted)] mt-1">threshold ${r.threshold}%</div>
+    ${fail?`<div class="text-[10px] mt-2" style="color:var(--red)">defect localized →</div>`:`<div class="text-[10px] mt-2" style="color:var(--green)">within tolerance</div>`}`;
+}
+
+async function traceDefect(sid,part){
+  const box=document.getElementById("defloop");
+  box.innerHTML=`<div class="mono text-xs text-[var(--muted)] pulse">flagging defect cluster · re-pricing supplier · re-optimizing…</div>`;
+  let r; try{ r=await (await fetch(API+"/defect",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({supplier_id:sid,part_id:part})})).json(); }
+  catch(e){ box.innerHTML="<div class='text-[var(--red)] text-xs'>error</div>"; return; }
+  const before=r.before.mix.map(m=>m.supplier+" "+m.share_pct+"%").join(", ");
+  const after=r.after.mix.map(m=>m.supplier+" "+m.share_pct+"%").join(", ");
+  box.innerHTML=`<div class="panel p-3 reveal" style="background:var(--panel2)">
+    <div class="text-xs font-semibold mb-2" style="color:var(--teal)">◆ PLANT &rarr; SUPPLY LOOP FIRED</div>
+    <div class="text-xs mb-1">Defect on <b>${r.supplier}</b> → incoming rate raised to <span class="mono" style="color:var(--red)">${r.new_defect_rate_pct}%</span> → quality-adjusted cost re-priced → optimizer re-ran on <span class="mono">${r.part}</span></div>
+    <div class="mono text-xs mt-2"><span class="text-[var(--muted)]">before:</span> ${before}</div>
+    <div class="mono text-xs"><span class="text-[var(--muted)]">after :</span> <span style="color:var(--green)">${after}</span></div>
+    <div class="text-[11px] text-[var(--muted)] mt-2">A quality signal on the floor changed the sourcing decision — the closed loop, both directions.</div>
+  </div>`;
+}
+
+init();
+</script>
+</body>
+</html>

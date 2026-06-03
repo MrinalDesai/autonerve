@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+backend/models/*/
+!backend/models/README.md
+.venv/
+node_modules/
+.next/

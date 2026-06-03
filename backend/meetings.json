@@ -1,0 +1,12 @@
+{
+  "meetings": [
+    {
+      "id": "MTG-001", "title": "Daily supply-risk standup · 2026-05-28",
+      "transcript": "Priya to escalate the neodymium export-control exposure on NM-005 to the buyer by Friday. Rahul will qualify POSCO ATEK as a second source for the magnet by next week. Anita should re-run the FST-M8 sourcing mix after the Supplier A defect spike. Karan to confirm Sundram capacity for Q3 by Thursday. The team agreed to widen the EVSED-P demand band given the China risk."
+    },
+    {
+      "id": "MTG-002", "title": "Plant quality review · 2026-05-27",
+      "transcript": "Suresh to quarantine the Minda B-4471 bracket lot after the burr cluster on Line 2. Meena will schedule a condition-monitoring check on Spindle 2 by Monday given the energy anomaly. Vikram should update SOP-MAG-007 with the new deburr pressure. Operations to trial the Sona BLW bracket alternate for two shifts."
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "event": {
+    "headline": "China widens rare-earth export licensing; neodymium magnet supply tightens",
+    "material": "neodymium",
+    "region": "CN",
+    "commodity": "RARE-EARTH",
+    "severity": "high"
+  },
+  "part": {
+    "id": "NM-MAG",
+    "name": "Traction-motor magnet",
+    "demand_units": 22701,
+    "used_in": "EV Sedan, EV SUV"
+  },
+  "suppliers": [
+    {
+      "id": "S1",
+      "name": "NdFeB Co",
+      "country": "CN",
+      "price": 1850,
+      "lead": 12,
+      "china": 100,
+      "defect": 2.1,
+      "risk": 0.82,
+      "capacity": 9000,
+      "ocr_defect": 3.4
+    },
+    {
+      "id": "S2",
+      "name": "Sundram",
+      "country": "IN",
+      "price": 1961,
+      "lead": 15,
+      "china": 0,
+      "defect": 1.0,
+      "risk": 0.3,
+      "capacity": 7000,
+      "ocr_defect": 1.1
+    },
+    {
+      "id": "S3",
+      "name": "POSCO ATEK",
+      "country": "KR",
+      "price": 1904,
+      "lead": 13,
+      "china": 0,
+      "defect": 0.7,
+      "risk": 0.28,
+      "capacity": 8000,
+      "ocr_defect": 0.6
+    },
+    {
+      "id": "S4",
+      "name": "Vietnam RE",
+      "country": "VN",
+      "price": 1990,
+      "lead": 18,
+      "china": 0,
+      "defect": 1.2,
+      "risk": 0.4,
+      "capacity": 3500,
+      "ocr_defect": 1.6
+    }
+  ],
+  "defect_signal": {
+    "supplier_id": "S1",
+    "supplier": "NdFeB Co",
+    "rate_pct": 9.5,
+    "note": "Vision QC flagged a burr/coating cluster on incoming lot L-2240 (Line 2)"
+  },
+  "substitute": {
+    "from_assembly": "Brake module",
+    "item": "Ferrite arc magnet",
+    "material": "ferrite",
+    "price": 520,
+    "perf_note": "-8% torque density \u2014 viable for economy SKUs only"
+  },
+  "energy": {
+    "line": "L2 Magnet assembly",
+    "kwh_per_unit": 3.01,
+    "baseline": 2.84,
+    "anomaly": "Spindle #2 bearing degradation"
+  },
+  "assumptions": {
+    "disruption_premium_pct": 25,
+    "inr_per_kwh": 8.0,
+    "inr_per_labour_hr": 520,
+    "expedite_hours_avoided": 120,
+    "manual_qc_hours_avoided": 80
+  },
+  "upcoming": [
+    {
+      "item": "Neodymium magnet",
+      "commodity": "RARE-EARTH",
+      "event": "China export licensing widens",
+      "lead_weeks": 3,
+      "price_rise_pct": 12.5,
+      "severity": "high"
+    },
+    {
+      "item": "Copper busbar",
+      "commodity": "COPPER",
+      "event": "Chile port strike forecast",
+      "lead_weeks": 5,
+      "price_rise_pct": 4.2,
+      "severity": "medium"
+    },
+    {
+      "item": "Power semiconductor",
+      "commodity": "SILICON",
+      "event": "Taiwan capacity tightening",
+      "lead_weeks": 8,
+      "price_rise_pct": 6.0,
+      "severity": "medium"
+    },
+    {
+      "item": "Ferrite (substitute)",
+      "commodity": "FERRITE",
+      "event": "demand surge if NdFeB scarce",
+      "lead_weeks": 2,
+      "price_rise_pct": 1.5,
+      "severity": "low"
+    }
+  ]
+}

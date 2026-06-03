@@ -1,0 +1,21 @@
+# AutoNerve — dependencies
+# Core: runs the full decision thread + API + dashboard (no model needed; fallbacks cover it)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pulp>=3.0
+
+# OCR intake (reads the news-clipping image; needs the Tesseract binary installed)
+pytesseract>=0.3.10
+pillow>=10.0
+numpy>=1.26   # one-shot vision diff
+
+# LLM layer: enables the real Qwen2.5-1.5B extraction (in-process, local, no API)
+# install these to run the live model; omit to use the deterministic fallback
+transformers>=4.44
+torch>=2.2
+accelerate>=0.30
+safetensors>=0.4
+
+# Optional / roadmap (live vision model — not required to run the prototype)
+# ultralytics>=8.2

@@ -1,0 +1,29 @@
+{
+  "sops": [
+    {
+      "id": "SOP-CAST-014", "topic": "Casting porosity diagnostics",
+      "keywords": ["porosity", "casting", "pour", "temperature", "degasser", "die-coat", "void"],
+      "text": "On detecting porosity in a casting: (1) verify pour temperature against target 720 ± 5 C; (2) check degasser N2 flow rate against spec; (3) inspect die-coat thickness. To raise pour temperature, increase the induction setpoint by 8 C and recheck after 4 minutes."
+    },
+    {
+      "id": "SOP-MAG-007", "topic": "Magnet-assembly burr (Line 2)",
+      "keywords": ["burr", "magnet", "line 2", "deburr", "tool", "wear", "edge", "fpy"],
+      "text": "If burr defects rise on Line 2 magnet assembly: (1) check press tooling for edge wear and replace if beyond 0.05 mm; (2) verify the deburr-station brush pressure is 2.5-3.0 bar; (3) confirm incoming magnet lot dimensions. A burr rate above 3% requires quarantining the current lot and flagging the supplier."
+    },
+    {
+      "id": "SOP-SPN-003", "topic": "Spindle vibration / condition monitoring",
+      "keywords": ["spindle", "vibration", "bearing", "energy", "kwh", "degradation", "anomaly", "condition"],
+      "text": "On a spindle vibration or sustained energy-draw anomaly: (1) log the vibration RMS and compare to the 4.5 mm/s alarm threshold; (2) schedule a condition-monitoring check before the next changeover; (3) a sustained +0.15 kWh/unit residual usually indicates early bearing degradation - plan bearing replacement within 2 weeks."
+    },
+    {
+      "id": "SOP-HARN-011", "topic": "Harness crimp misalignment",
+      "keywords": ["harness", "crimp", "misalign", "connector", "terminal", "pull-force"],
+      "text": "For harness crimp misalignment: (1) verify terminal seating and crimp height against the applicator spec; (2) run a pull-force test (min 80 N); (3) re-calibrate the applicator if three consecutive parts fail seating."
+    },
+    {
+      "id": "SOP-ECU-022", "topic": "ECU solder void",
+      "keywords": ["solder", "void", "ecu", "reflow", "paste", "populate", "x-ray"],
+      "text": "On ECU solder voids: (1) check reflow oven profile against the paste datasheet (peak 245 C); (2) verify solder-paste age and storage; (3) X-ray a sample of 5 boards. Void area above 25% under BGA requires rework."
+    }
+  ]
+}
