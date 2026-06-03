@@ -1,102 +1,163 @@
-# AutoNerve — prototype build
+# AutoNerve
 
-A unified AI nervous system connecting the supply chain to the shop floor.
-ET AutoTech Hackathon 2026 · Theme 1. Prototype-round build.
+**A unified AI nervous system for automotive supply chains + smart manufacturing.**
+ET AutoTech Hackathon 2026 · Theme 1.
 
-**The thesis to demo:** one closed loop nobody else shows — a news event →
-risk → alternate supplier → *predicted Cpk impact of switching* → PO push.
-A sourcing decision that knows its own quality consequence.
+AutoNerve ingests a disruption signal (e.g. a news event), runs a **local LLM** to
+extract it, propagates it through a **knowledge-graph BOM**, quantifies the rupee
+exposure, and runs a **MILP optimizer** to produce a de-risked sourcing decision —
+end to end, on one machine, no cloud. It then closes the loop the other way: a
+defect detected on the shop floor re-prices a supplier and re-runs the optimizer.
+
+> **Design principle:** *the LLM decides and explains; deterministic tools compute.*
+> The language model handles extraction and orchestration only. A deterministic
+> engine produces every number (risk, exposure, sourcing mix), grounded against the
+> knowledge graph so the model cannot hallucinate a decision.
 
 ---
 
-## Run it
+## Quick start (Windows / PowerShell)
 
-**Backend**
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --reload
+# open http://localhost:8000
+```
+
+macOS / Linux:
 ```bash
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=sk-...        # optional; falls back to cached event if unset
-uvicorn main:app --reload --port 8000
-```
-- `GET  /scenario`      → the whole seeded world (every screen reads this)
-- `POST /extract`       → article → structured event linked to BOM rows (Day 2 live moment)
-- `POST /loop`          → fire the closed loop, returns full reasoning trace (Day 3 live moment)
-
-Quick check the loop with no frontend:
-```bash
-python graph.py        # prints: Switch 40% to Sundram, +6% cost, −100% China dep, Cpk ≤ 0.03
+uvicorn main:app --reload
 ```
 
-**Frontend**
+**The full system runs with the core install above — no model, no API key, no cloud.**
+When the LLM weights are absent, deterministic fallbacks run the same thread, so a
+reviewer can verify correctness immediately. To enable the real LLM, see below.
+
+### One-command sanity check (no server)
 ```bash
-npx create-next-app@latest frontend --ts --tailwind --app --eslint
-# then copy ControlRoom.tsx into app/ and render it from app/page.tsx
-cd frontend && npm run dev      # http://localhost:3000
+cd backend
+python demo.py
 ```
+Prints the full decision thread over several news articles
+(extract → propagate → exposure → optimize → recommend).
+
+---
+
+## Enable the local LLM (optional)
+
+The LLM layer uses **Qwen2.5-1.5B-Instruct** in-process via HuggingFace `transformers`
+(no Ollama, no API). With it loaded, news extraction is model-driven and validated
+against the BOM; without it, a deterministic keyword extractor covers the same path.
+
+```powershell
+pip install transformers torch accelerate safetensors
+# download weights into backend/models/Qwen2.5-1.5B-Instruct/
+python -c "from transformers import AutoTokenizer, AutoModelForCausalLM; m='Qwen/Qwen2.5-1.5B-Instruct'; AutoTokenizer.from_pretrained(m).save_pretrained('models/Qwen2.5-1.5B-Instruct'); AutoModelForCausalLM.from_pretrained(m).save_pretrained('models/Qwen2.5-1.5B-Instruct')"
+```
+`demo.py` then reports `LLM model present: True` and extraction runs `via llm+validated`.
+(Weights are not committed — see `.gitignore`. Point `AUTONERVE_MODEL` at an existing copy to reuse it.)
+
+---
+
+
+### Optional: OCR news intake
+The Agentic Run reads a news-clipping image (`backend/sample_news.png`) via Tesseract.
+Install the engine to enable it: Windows `winget install tesseract` (or the UB-Mannheim build);
+macOS `brew install tesseract`; Linux `apt install tesseract-ocr`. Plus `pip install pytesseract pillow`.
+Without it, the step falls back to cached text and labels itself accordingly.
+
+---
+
+## What it does (the live decision thread)
+
+```
+news article  →  LLM extraction (validated vs BOM)  →  graph propagation
+              →  MRP exposure  →  MILP optimizer  →  recommended sourcing action
+                                          ↑
+   shop-floor defect  →  supplier re-priced  →  re-optimize   (the closed loop)
+```
+
+Worked example (neodymium export control): hits 2 EV models, ₹4.2 Cr exposure over
+12 weeks, optimizer shifts the magnet mix from 100% → 18.6% China dependency at +2%
+cost — and reports honestly when zero-China is infeasible at full volume.
+
+---
+
+## Dashboard (open `/`)
+
+Eight tabs, all reading the live API:
+**Control Room** (fire a signal → decision card) · **Supply Globe** · **Plant Floor**
+(lines, vision QC, defect→sourcing loop, energy, operator copilot) · **BOM Explorer**
+(selectable supplier paths, live cost/lead rollup) · **Planning & Actions** (forecast
+scenarios, meeting→actions) · **Procurement** (price forecast, scarcity, buy plan) ·
+**Analytics** (Cpk forecast, yield waterfall, supplier scorecard, PO slip) ·
+**Alternate Sourcing** (cheapest vs fastest).
+
+---
+
+## Architecture
+
+| Layer | File | Role |
+|-------|------|------|
+| Data / knowledge graph | `bom.csv`, `demand_series.csv`, `commodity_prices.csv`, `articles.json`, `sops.json`, `meetings.json` | single source of truth: typed entities + relationships |
+| LLM | `llm.py` | Qwen2.5-1.5B in-process (transformers); extraction + grounding only |
+| Extraction | `extraction.py` | news → event; LLM + BOM-validation + deterministic fallback |
+| Deterministic engine | `engine.py` | propagation, MRP exposure, MILP optimizer, multi-objective sourcing, BOM rollup, forecast, defect loop, analytics |
+| API + UI | `main.py`, `frontend/index.html` | FastAPI serves the dashboard at `/` and ~24 endpoints |
+
+**Stack:** Python 3.11 · FastAPI · PuLP (CBC MILP solver) · transformers + PyTorch
+(Qwen2.5-1.5B, local) · single-file HTML/JS dashboard (Tailwind + globe.gl, no build step).
+
+Key endpoints: `/scenario`, `/event`, `/article/{id}`, `/bom/{product}`,
+`/strategies/{part}`, `/forecast/{id}`, `/procurement`, `/plant`, `/defect`,
+`/cpk/{line}`, `/scorecard/{supplier}`, `/po-forecast`. Full list at `/docs`.
+
+---
+
+## Capability fidelity (honest scope)
+
+This prototype implements a **real decision core** and a breadth of supporting views.
+We mark fidelity rather than overclaim:
+
+- **Live (real logic):** news extraction (LLM), graph propagation, MRP exposure,
+  MILP sourcing optimizer, cheapest/fastest multi-objective sourcing, BOM cost/lead
+  rollup, demand forecast (least-squares + bands), defect → re-sourcing closed loop,
+  operator SOP retrieval, meeting action extraction.
+- **Prototyped / seeded (interface real, model simplified):** vision QC feed, Cpk
+  display + trend forecast, energy anomaly, supplier scorecard, PO slip, quality
+  monitoring.
+- **Roadmap (named target methods, not implemented):** GNN risk, temporal
+  transformer / NHITS demand models, YOLOv8 + PatchCore vision, Whisper audio,
+  Altman-Z financial-health ML, causal discovery.
+
+All data is **synthetic/illustrative** demo data (not live feeds or real contracts).
 
 ---
 
 ## Repo layout
+
 ```
 autonerve/
-  backend/
-    scenario.json     ← SINGLE SOURCE OF TRUTH. Get this right, screens become mapping.
-    main.py           ← FastAPI: /scenario, /extract, /loop
-    graph.py          ← LangGraph 3-node closed loop (the moat)
-    extraction.py     ← news → BOM linkage, cached fallback for demo-day safety
-    requirements.txt
-  frontend/
-    ControlRoom.tsx   ← pattern-setter: fetch /scenario, render, fire /loop live
+├── backend/
+│   ├── engine.py · llm.py · extraction.py · main.py · demo.py · vision.py
+│   ├── bom.csv · demand_series.csv · commodity_prices.csv
+│   ├── articles.json · sops.json · meetings.json
+│   ├── models/           # Qwen weights go here (gitignored)
+│   └── requirements.txt
+├── frontend/
+│   └── index.html        # single-file dashboard, served at /
+├── README.md · RUN.md · AutoNerve_Design_Document.pdf
+└── .gitignore
 ```
 
 ---
 
-## 5-day checklist (deadline Thu Jun 4)
+## License
 
-### Day 1 — Sat 30 · scaffold + the world
-- [ ] `create-next-app`, get `ControlRoom.tsx` rendering against `/scenario`
-- [ ] Backend running, `/scenario` returns the seed
-- [ ] Control Room (S6) looks like the slide, fully seeded
-- [ ] **Cut line:** stop when the hero screen renders. No styling rabbit holes.
-
-### Day 2 — Sun 31 · news → BOM (real AI #1)
-- [ ] Pre-fetch 20–40 real articles (GDELT / Reuters RSS) → `articles.json`. Do NOT build live polling.
-- [ ] `/extract` returns structured event linked to the 4 magnet BOM rows, live on screen
-- [ ] Cache the LLM output so a flaky API can't break the demo
-- [ ] **Cut line:** extraction returns the linkage. Don't expand the schema.
-
-### Day 3 — Mon 1 · the loop (the moat, real AI #2)
-- [ ] `graph.py` runs end to end → Sundram recommendation with Cpk impact
-- [ ] Wire `/loop` to the AI-suggested-action card + Alternate Sourcing screen (S25)
-- [ ] Animate each node firing — it reads beautifully on video
-- [ ] **Cut line:** loop produces the recommendation. Cpk stays a lookup, not a model.
-
-### Day 4 — Tue 2 · breadth + two cheap live add-ons
-- [ ] 3–4 more seeded screens from the JSON: Supply Risk Map (S23), PO Forecast (S24),
-      Material Substitution (S26), Real-Time QM (S38) — Recharts + layout, no new logic
-- [ ] Meeting extraction (S35): one transcript → LLM → actions JSON (single call)
-- [ ] Operator guidance (S37): tiny RAG over `scenario.sops` (single call)
-- [ ] **Cut line:** these two work. Do not gold-plate.
-
-### Day 5 — Wed 3 / Thu 4 · freeze, polish, record, submit
-- [ ] Wed eve: **feature freeze.** Polish ONLY the click-path the video follows.
-- [ ] Make live calls reliable; cached fallbacks verified
-- [ ] Record 2–4 min video: alert fires → news→BOM → loop → Cpk impact → PO push
-- [ ] Submit prototype + video + architecture
-
----
-
-## Hard noes (this is where solo builds die)
-- No real GNN — precomputed risk scores.
-- No trained Cpk / forecasting / energy models — lookups + synthetic series.
-- No live vision QC — seeded panels (one webcam clip only if Day 4 finishes early).
-- No real SAP/ERP connector — "Push to SAP" writes a local row + toast.
-- No live external feeds at judging time — everything shown live is also cached.
-
-## Coverage story for the judges
-Live spine touches 8 of 15 focus areas (risk, predictive planning, alternate
-sourcing, material substitution, commodity intel, supplier analytics, ERP
-decisions, process capability). The two cheap add-ons add 2 more. The rest are
-seeded panels. Pitch: "architecture addresses all 15; these 10 run; this loop is
-unique." True, and stronger than 15 fragile stubs.
+Prototype for ET AutoTech Hackathon 2026. Demo data is synthetic.
