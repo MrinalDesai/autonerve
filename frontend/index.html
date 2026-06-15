@@ -12,7 +12,7 @@
   :root{
     --bg:#070b10; --panel:#0d141c; --panel2:#111b25; --line:#1d2b38;
     --txt:#dbe7ef; --muted:#6f8597; --teal:#2dd4bf; --teal-d:#0e7c73;
-    --amber:#f3a712; --red:#ef4759; --green:#34d399; --cyan:#38bdf8;
+    --amber:#f3a712; --red:#ef4759; --green:#34d399; --cyan:#38bdf8; --ai-c:#c98bff;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);
@@ -21,6 +21,35 @@
                      radial-gradient(circle at 90% 0%,rgba(56,189,248,.06),transparent 35%);}
   .mono{font-family:'IBM Plex Mono',monospace}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  /* Reasoning Engine */
+  .re-step{opacity:.35;transition:opacity .4s,border-color .4s}
+  .re-step.on{opacity:1;border-color:var(--teal-d)}
+  .re-h{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:ui-monospace,Consolas,monospace;margin-bottom:10px;display:flex;align-items:center;gap:9px}
+  .re-pill{font-family:ui-monospace,Consolas,monospace;font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:5px;font-weight:700}
+  .re-pill.ai{color:#c98bff;background:rgba(201,139,255,.12);border:1px solid rgba(201,139,255,.4)}
+  .re-pill.sw{color:var(--cyan);background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4)}
+  .re-tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .re-tbl{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;overflow:auto}
+  .re-tbl .cap{font-family:ui-monospace,Consolas,monospace;font-size:9.5px;letter-spacing:1px;color:var(--cyan);text-transform:uppercase;margin-bottom:7px}
+  .re-tbl table{width:100%;border-collapse:collapse;font-size:10.5px}
+  .re-tbl th{text-align:left;color:var(--muted);font-weight:600;font-family:ui-monospace,Consolas,monospace;font-size:9px;padding:3px 6px;border-bottom:1px solid var(--line);text-transform:uppercase}
+  .re-tbl td{padding:3px 6px;font-family:ui-monospace,Consolas,monospace;color:var(--txt);border-bottom:1px solid rgba(29,43,56,.5);white-space:nowrap}
+  .re-tbl tr.glow td{background:rgba(243,167,18,.16);color:#fff;box-shadow:inset 2px 0 0 var(--amber)}
+  .re-intent{background:var(--panel2);border:1px solid var(--amber);border-left:3px solid var(--amber);border-radius:9px;padding:11px 14px;font-size:14px}
+  .re-sql{background:#070d12;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--green);line-height:1.55;white-space:pre-wrap;margin-top:4px}
+  .re-sql .kw{color:var(--cyan)} .re-sql .st{color:var(--amber)}
+  .re-f{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#070d12;border:1px solid var(--line);border-radius:8px;padding:12px 14px;line-height:1.9}
+  .re-f .v{color:var(--amber)} .re-f .r{color:var(--teal);font-weight:700}
+  .re-cons{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--muted);line-height:1.7}
+  .re-cons b{color:var(--txt)}
+  .re-ba{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:11px}
+  .re-metric{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 13px}
+  .re-metric .lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .re-metric .row{display:flex;align-items:center;gap:9px;font-family:ui-monospace,Consolas,monospace}
+  .re-metric .bb{font-size:18px;color:var(--muted)} .re-metric .a{font-size:22px;font-weight:700}
+  .re-metric.good .a{color:var(--green)} .re-metric.bad .a{color:var(--amber)}
+  .re-rec{background:var(--panel2);border:1px solid var(--green);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.5}
+  .re-rec b{color:var(--green)}
   .tab{cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);
     padding:10px 4px;font-weight:600;letter-spacing:.02em;transition:.18s}
   .tab.active{color:var(--teal);border-color:var(--teal)}
@@ -90,6 +119,8 @@
     <div class="tab" data-tab="procure">PROCUREMENT</div>
     <div class="tab" data-tab="analytics">ANALYTICS</div>
     <div class="tab" data-tab="agentrun">AGENTIC RUN</div>
+    <div class="tab" data-tab="reasoning">REASONING ENGINE</div>
+    <div class="tab" data-tab="decision">DECISION GRAPH</div>
     <div class="tab" data-tab="sourcing">ALTERNATE SOURCING</div>
   </nav>
 
@@ -407,9 +438,14 @@
           <div class="text-sm font-semibold mb-1">Agentic decision run <span class="text-[var(--muted)] font-normal">· six role-specialized Qwen agents, one event</span></div>
           <div id="ar-headline" class="text-xs text-[var(--muted)] max-w-2xl"></div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap items-center">
           <button id="ar-run" onclick="runAgents(false)" class="px-4 py-2 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">▶ Run agents</button>
           <button onclick="runAgents(true)" class="px-3 py-2 rounded-md text-sm border border-[var(--line)] text-[var(--muted)]">Replay (cached)</button>
+          <button id="ar-save" onclick="saveRun()" class="px-3 py-2 rounded-md text-sm border border-[var(--line)] text-[var(--muted)]" title="Save the last completed run so it can be replayed later without a live model">💾 Save run</button>
+          <select id="ar-records" onchange="playRecord(this.value)" class="px-2 py-2 rounded-md text-sm bg-[var(--panel2)] border border-[var(--line)] text-[var(--muted)]" title="Play a previously saved run">
+            <option value="">▷ Saved runs…</option>
+          </select>
+          <button onclick="deleteRecord()" id="ar-del" class="px-2 py-2 rounded-md text-xs border border-[var(--line)] text-[var(--muted)]" title="Delete the selected saved run">✕</button>
         </div>
       </div>
       <!-- pipeline strip -->
@@ -419,6 +455,74 @@
   </section>
 
   <!-- ===== SOURCING ===== -->
+  <section id="tab-reasoning" class="hidden">
+    <div class="panel p-5 mb-4">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-sm font-semibold mb-1">Reasoning Engine <span class="text-[var(--muted)] font-normal">· from a question to a grounded decision — every step shown</span></div>
+          <div class="text-xs mono" style="color:var(--teal)">AI does what software cannot — read, translate, reason. Software does what AI shouldn't — compute every number.</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="re-run" onclick="runReasoning()" class="px-4 py-2 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">▶ Run the reasoning</button>
+          <button onclick="initReasoning()" class="px-3 py-2 rounded-md text-sm border border-[var(--line)] text-[var(--muted)]">Reset</button>
+          <span id="re-status" class="mono text-xs self-center" style="color:var(--muted)"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="re-step panel p-4 mb-3" id="re-s1"><div class="re-h">1 · Data on hand <span class="re-pill sw">STORED</span></div>
+      <div id="re-tables" class="re-tables"></div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s2"><div class="re-h">2 · The question, in plain English <span class="re-pill ai">AI</span></div>
+      <div class="re-intent">"China is restricting neodymium. Which suppliers can make the NdFeB magnet, what do they cost, and how much can they make?"</div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s3"><div class="re-h">3 · AI translates English → SQL, and it runs <span class="re-pill ai">AI → SQL</span></div>
+      <div class="re-sql" id="re-sql"></div>
+      <div class="text-xs text-[var(--muted)] mt-2">The query is generated from the question and executed live against the tables above. The matching rows glow.</div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s4"><div class="re-h">4 · Trend referenced — demand forecast <span class="re-pill sw">SW</span></div>
+      <div class="re-f" id="re-trend"></div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s5"><div class="re-h">5 · Formula — rupees at risk <span class="re-pill sw">SW · MRP</span></div>
+      <div class="re-f" id="re-exposure"></div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s6"><div class="re-h">6 · Optimisation — the MILP, with constraints <span class="re-pill sw">SW · CBC</span></div>
+      <div class="re-cons" id="re-milp"></div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s7"><div class="re-h">7 · Before → After (every number computed) <span class="re-pill sw">SW</span></div>
+      <div class="re-ba" id="re-ba"></div></div>
+    <div class="re-step panel p-4 mb-3" id="re-s8"><div class="re-h">8 · Recommendation <span class="re-pill ai">AI</span></div>
+      <div class="re-rec" id="re-rec"></div></div>
+    <div class="text-[11px] mono text-[var(--muted)] mt-1">AI: NL→SQL · reasoning.&nbsp;|&nbsp;Software: SQL execution · MRP · MILP optimisation.&nbsp;|&nbsp;Every figure is computed and reproducible, none generated.</div>
+  </section>
+
+  <section id="tab-decision" class="hidden">
+    <div class="panel p-5 mb-4">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-sm font-semibold mb-1">Decision Graph <span class="text-[var(--muted)] font-normal">· the reasoning as a graph — watch the path light up</span></div>
+          <div class="text-xs mono" style="color:var(--teal)">Each node is a decision. Kept paths glow; dropped paths go dark. Every branch has a reason.</div>
+        </div>
+        <div class="flex gap-2 items-center flex-wrap">
+          <button id="dg-run" onclick="runGraph()" class="px-4 py-2 rounded-md font-semibold text-sm" style="background:var(--teal-d);color:#eafffb">▶ Trace the decision</button>
+          <button onclick="resetGraph()" class="px-3 py-2 rounded-md text-sm border border-[var(--line)] text-[var(--muted)]">Reset</button>
+          <label class="mono text-xs flex items-center gap-1.5" style="color:var(--muted)"><input type="checkbox" id="dg-live"> live Qwen explanations</label>
+          <span id="dg-status" class="mono text-xs" style="color:var(--muted)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+      <div class="panel p-4">
+        <div class="mono text-[10px] tracking-wider uppercase mb-2" style="color:var(--muted)">Decision graph · supplier sourcing for NdFeB magnet</div>
+        <svg viewBox="0 0 760 560" id="dg-svg" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block"></svg>
+        <div class="mono text-[11px] mt-2 flex gap-4 flex-wrap" style="color:var(--muted)">
+          <span><span style="display:inline-block;width:18px;height:3px;background:var(--teal);vertical-align:middle;margin-right:5px;border-radius:2px"></span>path taken</span>
+          <span><span style="display:inline-block;width:18px;height:3px;background:var(--red);vertical-align:middle;margin-right:5px;border-radius:2px"></span>dropped / infeasible</span>
+          <span><span style="display:inline-block;width:18px;height:3px;background:var(--line);vertical-align:middle;margin-right:5px;border-radius:2px"></span>not evaluated</span>
+        </div>
+      </div>
+      <div class="panel p-4">
+        <div class="mono text-[10px] tracking-wider uppercase mb-3" style="color:var(--muted)">Reasoning at each node <span style="color:var(--ai-c)">· Qwen</span></div>
+        <div id="dg-qa"></div>
+      </div>
+    </div>
+    <div class="mono text-[11px] mt-2" style="color:var(--muted)">AutoNerve's actual sourcing decision flow. Node logic is deterministic; the per-node explanation is generated by the local Qwen model (pre-captured for demo; live on toggle).</div>
+  </section>
+
   <section id="tab-sourcing" class="hidden">
     <div class="panel p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -455,7 +559,7 @@ setInterval(tick,1000); tick();
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   t.classList.add("active");
-  ["control","globe","plant","bom","planning","procure","analytics","agentrun","sourcing"].forEach(id=>
+  ["control","globe","plant","bom","planning","procure","analytics","agentrun","reasoning","decision","sourcing"].forEach(id=>
     document.getElementById("tab-"+id).classList.toggle("hidden", id!==t.dataset.tab));
   if(t.dataset.tab==="globe" && globe) setTimeout(()=>globe.width(document.getElementById("globe").clientWidth),50);
   if(t.dataset.tab==="plant"){ loadPlant(); startPlantTicker(); } else { stopPlantTicker(); }
@@ -465,6 +569,8 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   if(t.dataset.tab==="procure") loadProcurement();
   if(t.dataset.tab==="analytics") loadAnalytics();
   if(t.dataset.tab==="agentrun") initAgentRun();
+  if(t.dataset.tab==="reasoning") initReasoning();
+  if(t.dataset.tab==="decision") resetGraph();
 });
 
 // ---- init ----
@@ -1209,6 +1315,7 @@ function initAgentRun(){
   document.getElementById("ar-headline").textContent=
     "China widens rare-earth export licensing; neodymium magnet supply tightens — watch six agents reason from this single signal to a grounded action.";
   renderPipeline(-1);
+  refreshRecordsDropdown();
   if(!document.getElementById("ar-cards").innerHTML) document.getElementById("ar-cards").innerHTML=
     `<div class="text-xs text-[var(--muted)] panel p-4">Press <b>Run agents</b>. Each agent makes a live Qwen call (a few seconds each on CPU) and lights up as it finishes.</div>`;
 }
@@ -1235,6 +1342,53 @@ async function runAgents(useCache){
   }
   renderPipeline(AR_STEPS.length);
   btn.disabled=false; btn.textContent="▶ Run agents";
+  arLastRun=JSON.parse(JSON.stringify(arCache));  // snapshot the completed run for saving
+}
+
+// ---- Saved runs (persisted in localStorage; survive refresh, no live model needed) ----
+const AR_STORE="autonerve_agent_runs";
+let arLastRun=null;
+function loadRecords(){ try{ return JSON.parse(localStorage.getItem(AR_STORE)||"{}"); }catch(e){ return {}; } }
+function refreshRecordsDropdown(){
+  const recs=loadRecords(); const sel=document.getElementById("ar-records"); if(!sel) return;
+  const names=Object.keys(recs).sort();
+  sel.innerHTML=`<option value="">▷ Saved runs… (${names.length})</option>`+
+    names.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+function saveRun(){
+  const run=arLastRun||arCache;
+  if(!run||!Object.keys(run).length){ alert("Run the agents once first, then save."); return; }
+  const def="Run "+new Date().toLocaleString();
+  const name=prompt("Name this saved run:",def);
+  if(!name) return;
+  const recs=loadRecords(); recs[name]=run;
+  try{ localStorage.setItem(AR_STORE,JSON.stringify(recs)); }
+  catch(e){ alert("Could not save (storage full?)."); return; }
+  refreshRecordsDropdown();
+  document.getElementById("ar-records").value=name;
+}
+async function playRecord(name){
+  if(!name) return;
+  const recs=loadRecords(); const run=recs[name];
+  if(!run){ alert("Saved run not found."); return; }
+  arCache=JSON.parse(JSON.stringify(run));          // load it as the cache
+  const btn=document.getElementById("ar-run"); btn.disabled=true;
+  document.getElementById("ar-cards").innerHTML="";
+  for(let i=0;i<AR_STEPS.length;i++){
+    renderPipeline(i);
+    const d=arCache[AR_STEPS[i].key]||{error:1};
+    await new Promise(r=>setTimeout(r,250));
+    document.getElementById("ar-cards").insertAdjacentHTML("beforeend", arCard(AR_STEPS[i].key,d));
+  }
+  renderPipeline(AR_STEPS.length); btn.disabled=false;
+}
+function deleteRecord(){
+  const sel=document.getElementById("ar-records"); const name=sel.value;
+  if(!name){ alert("Pick a saved run to delete."); return; }
+  if(!confirm("Delete saved run \""+name+"\"?")) return;
+  const recs=loadRecords(); delete recs[name];
+  localStorage.setItem(AR_STORE,JSON.stringify(recs));
+  refreshRecordsDropdown();
 }
 function srcBadge(s){ return `<span class="chip" style="background:${s==='qwen'?'#10261f':'#26210f'};color:${s==='qwen'?'var(--teal)':'var(--amber)'}">${s==='qwen'?'Qwen':'fallback'}</span>`; }
 function arCard(key,d){
@@ -1437,6 +1591,156 @@ async function traceDefect(sid,part){
     <div class="mono text-xs"><span class="text-[var(--muted)]">after :</span> <span style="color:var(--green)">${after}</span></div>
     <div class="text-[11px] text-[var(--muted)] mt-2">A quality signal on the floor changed the sourcing decision — the closed loop, both directions.</div>
   </div>`;
+}
+
+// ===== Reasoning Engine tab =====
+const RE_SUP=[
+ {supplier:"NdFeB Co",country:"CN",qadj:1889.68,unit:1850,cap_wk:4000,china:100,defect:0.021},
+ {supplier:"POSCO ATEK",country:"KR",qadj:1904.14,unit:1865,cap_wk:1000,china:0,defect:0.009},
+ {supplier:"Sundram Fasteners",country:"IN",qadj:1972.84,unit:1932,cap_wk:542,china:0,defect:0.006},
+];
+const RE_BOM=[
+ {part:"EV Sedan-P",child:"Drive motor",material:"-",commodity:"-"},
+ {part:"Drive motor",child:"NdFeB magnet",material:"NdFeB",commodity:"RARE-EARTH"},
+ {part:"NdFeB magnet",child:"Neodymium (raw)",material:"neodymium",commodity:"RARE-EARTH"},
+];
+const RE_PLANT=[
+ {line:"L2 Magnet assy",cpk:1.18,fpy:"88.3%",defect:"Burr 3.4%"},
+ {line:"L4 ECU populate",cpk:1.41,fpy:"92.1%",defect:"Solder"},
+];
+const RE_FC=[{part:"NdFeB magnet",wk_demand:1892,horizon:12,total:22701}];
+const RE_INV=[{part:"NdFeB magnet",on_hand:3100,weeks_cover:1.6,reorder:"YES"}];
+function reTbl(cap,rows,cols){
+  const head="<tr>"+cols.map(c=>`<th>${c}</th>`).join("")+"</tr>";
+  const body=rows.map((r,i)=>`<tr data-rrow="${cap}-${i}">`+cols.map(c=>`<td>${r[c]}</td>`).join("")+"</tr>").join("");
+  return `<div class="re-tbl"><div class="cap">${cap}</div><table>${head}${body}</table></div>`;
+}
+function initReasoning(){
+  document.getElementById("re-tables").innerHTML=
+   reTbl("suppliers",RE_SUP,["supplier","country","qadj","cap_wk","china","defect"])+
+   reTbl("bom",RE_BOM,["part","child","material","commodity"])+
+   reTbl("plant_floor",RE_PLANT,["line","cpk","fpy","defect"])+
+   reTbl("forecast",RE_FC,["part","wk_demand","horizon","total"])+
+   reTbl("inventory",RE_INV,["part","on_hand","weeks_cover","reorder"]);
+  ["re-sql","re-trend","re-exposure","re-milp","re-ba","re-rec"].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML="";});
+  for(let i=1;i<=8;i++) document.getElementById("re-s"+i).classList.remove("on");
+  document.getElementById("re-status").textContent="";
+}
+const reSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function reOn(n){document.getElementById("re-s"+n).classList.add("on");}
+async function runReasoning(){
+  const btn=document.getElementById("re-run"); btn.disabled=true;
+  initReasoning();
+  document.getElementById("re-status").textContent="engine: in-page SQL";
+  reOn(1); await reSleep(450);
+  reOn(2); await reSleep(550);
+  reOn(3);
+  const sql=`<span class="kw">SELECT</span> supplier, country, qadj, cap_wk, china, defect
+<span class="kw">FROM</span> suppliers
+<span class="kw">WHERE</span> part = <span class="st">'NdFeB magnet'</span>
+<span class="kw">ORDER BY</span> qadj <span class="kw">ASC</span>;`;
+  const sqlEl=document.getElementById("re-sql"); const plain=sql.replace(/<[^>]+>/g,"");
+  for(let i=0;i<plain.length;i++){ sqlEl.textContent=plain.slice(0,i+1); await reSleep(7); }
+  sqlEl.innerHTML=sql; await reSleep(250);
+  // "execute": sort suppliers by qadj, glow the rows; flag the China row as the risk
+  [...RE_SUP].map((s,i)=>i).forEach(i=>document.querySelector(`[data-rrow="suppliers-${i}"]`).classList.add("glow"));
+  await reSleep(650);
+  reOn(4);
+  document.getElementById("re-trend").innerHTML=
+   `demand forecast (NdFeB magnet, 12-week horizon)<br>= weekly demand <span class="v">1,892</span> × <span class="v">12</span> weeks = <span class="r">22,701 units</span>`;
+  document.querySelector('[data-rrow="forecast-0"]').classList.add("glow");
+  await reSleep(650);
+  reOn(5);
+  document.getElementById("re-exposure").innerHTML=
+   `exposure = qty_at_risk × primary (China) unit price<br>= <span class="v">22,701</span> × ₹<span class="v">1,850</span> = ₹<span class="r">4.20 Cr</span> at risk / 12 weeks`;
+  await reSleep(650);
+  reOn(6);
+  document.getElementById("re-milp").innerHTML=
+   `<b>minimise</b>  Σ qualityAdjCost[s] · x[s]<br>`+
+   `<b>s.t.</b>  Σ x[s] ≥ 22,701&nbsp;&nbsp;<span style="color:var(--muted)"># meet demand</span><br>`+
+   `&nbsp;&nbsp;&nbsp;&nbsp;x[POSCO] ≤ 12,000 · x[Sundram] ≤ 6,504 · x[China] ≤ 48,000&nbsp;&nbsp;<span style="color:var(--muted)"># capacity (12wk)</span><br>`+
+   `&nbsp;&nbsp;&nbsp;&nbsp;Σ china[s]·x[s] ≤ 0&nbsp;&nbsp;<span style="color:var(--muted)"># zero-China target</span><br><br>`+
+   `<span style="color:var(--amber)">⚠ zero-China infeasible</span> — non-China capacity (18,504) &lt; demand (22,701). `+
+   `Solver relaxes to <b>minimise</b> China share → <b>POSCO 12,000 (53%) · Sundram 6,504 (29%) · China 4,197 (18%)</b>`;
+  await reSleep(750);
+  reOn(7);
+  const M=[["China dependency","100%","18.5%",1],["Risk exposure score","84","21",1],["Supply coverage (non-China)","0%","82%",1],["Cost impact","—","+1.7%",0]];
+  document.getElementById("re-ba").innerHTML=M.map(m=>
+   `<div class="re-metric ${m[3]?'good':'bad'}"><div class="lab">${m[0]}</div>
+    <div class="row"><span class="bb">${m[1]}</span><span>→</span><span class="a">${m[2]}</span></div></div>`).join("");
+  await reSleep(650);
+  reOn(8);
+  document.getElementById("re-rec").innerHTML=
+   `Shift sourcing to <b>POSCO (KR)</b> and <b>Sundram (IN)</b>, cutting China dependency <b>100% → 18.5%</b> for <b>+1.7%</b> cost. `+
+   `Residual 18% is unavoidable at full volume — <b>qualify the ferrite substitute</b> to close the last gap.`;
+  btn.disabled=false;
+}
+
+// ===== Decision Graph tab =====
+const DG_N={
+  signal:{x:330,y:30,w:140,h:38,label:"News signal",sub:"OCR + extract",kind:"start"},
+  graph:{x:330,y:95,w:140,h:38,label:"Graph match",sub:"material→part",kind:"sw"},
+  method:{x:330,y:165,w:160,h:42,label:"Choose method",sub:"min-cost vs min-China",kind:"branch"},
+  china:{x:90,y:265,w:150,h:46,label:"NdFeB Co · CN",sub:"100% CN · 2.1% def",kind:"sup"},
+  posco:{x:305,y:265,w:150,h:46,label:"POSCO · KR",sub:"0% CN · 0.9% def",kind:"sup"},
+  sundram:{x:520,y:265,w:150,h:46,label:"Sundram · IN",sub:"0% CN · 0.6% def",kind:"sup"},
+  dchina:{x:115,y:355,w:100,h:34,label:"DROP",sub:"",kind:"drop"},
+  kposco:{x:330,y:355,w:100,h:34,label:"KEEP",sub:"",kind:"keep"},
+  ksundram:{x:545,y:355,w:100,h:34,label:"KEEP",sub:"",kind:"keep"},
+  optimize:{x:320,y:430,w:160,h:42,label:"MILP optimise",sub:"min qual-adj cost",kind:"sw"},
+  decision:{x:310,y:500,w:180,h:46,label:"Decision",sub:"100%→18.5% @ +1.7%",kind:"end"},
+};
+const DG_E=[["signal","graph","lit"],["graph","method","lit"],["method","china","lit"],["method","posco","lit"],["method","sundram","lit"],
+  ["china","dchina","dead"],["posco","kposco","lit"],["sundram","ksundram","lit"],
+  ["dchina","optimize","dead"],["kposco","optimize","lit"],["ksundram","optimize","lit"],["optimize","decision","lit"]];
+const DG_QA=[
+  {n:"graph",q:"Which part does this news affect?",a:"The neodymium signal matches the NdFeB magnet (NM-005) via the BOM, which feeds two EV models. Traversal is exact, not guessed.",src:"deterministic"},
+  {n:"method",q:"Can we hit zero China dependency?",a:"No. Non-China capacity (18,504/12wk) is below demand (22,701). So I switch from the min-cost method to the min-China method — an honest partial de-risk.",src:"Qwen"},
+  {n:"china",q:"Should we keep NdFeB Co (China)?",a:"Drop as primary. 100% single-region concentration and 2.1% defect rate breach tolerance. Retain only for the unavoidable residual.",src:"Qwen"},
+  {n:"posco",q:"Should we keep POSCO (Korea)?",a:"Keep. 0% China dependency, lowest quality-adjusted cost among alternates, 0.9% defects within tolerance. Allocate to capacity.",src:"Qwen"},
+  {n:"sundram",q:"Should we keep Sundram (India)?",a:"Keep. 0% China dependency and the lowest defect rate (0.6%). Slightly higher cost, but it diversifies the base. Allocate remaining.",src:"Qwen"},
+  {n:"optimize",q:"What mix minimises cost within these constraints?",a:"POSCO 12,000 (53%), Sundram 6,504 (29%), residual China 4,197 (18%). Computed exactly by the CBC solver, not estimated.",src:"deterministic"},
+  {n:"decision",q:"What is the recommendation?",a:"Shift to Korea + India: China 100%→18.5% for +1.7% cost. Qualify the ferrite substitute to close the last 18%.",src:"Qwen"},
+];
+function dgCol(k){return {start:"var(--cyan)",sw:"var(--cyan)",branch:"var(--amber)",sup:"var(--muted)",keep:"var(--green)",drop:"var(--red)",end:"var(--teal)"}[k]||"var(--muted)";}
+function drawGraph(){
+  let s="";
+  DG_E.forEach(([a,b])=>{const A=DG_N[a],B=DG_N[b];const x1=A.x+A.w/2,y1=A.y+A.h,x2=B.x+B.w/2,y2=B.y,my=(y1+y2)/2;
+    s+=`<path id="e-${a}-${b}" d="M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}" fill="none" stroke="var(--line)" stroke-width="2" style="transition:stroke .45s,stroke-width .45s,opacity .45s"/>`;});
+  for(const k in DG_N){const n=DG_N[k],c=dgCol(n.kind),rx=(n.kind==="keep"||n.kind==="drop")?16:7;
+    s+=`<g id="n-${k}" opacity="0.35" style="transition:opacity .45s">
+      <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="${rx}" fill="var(--panel2)" stroke="${c}" stroke-width="1.5"/>
+      <text x="${n.x+n.w/2}" y="${n.y+(n.sub?n.h/2-1:n.h/2+4)}" text-anchor="middle" fill="${c}" font-weight="bold" style="font-family:ui-monospace,Consolas,monospace;font-size:11px">${n.label}</text>
+      ${n.sub?`<text x="${n.x+n.w/2}" y="${n.y+n.h/2+12}" text-anchor="middle" fill="var(--muted)" style="font-family:ui-monospace,Consolas,monospace;font-size:8.5px">${n.sub}</text>`:""}
+    </g>`;}
+  document.getElementById("dg-svg").innerHTML=s;
+}
+function resetGraph(){
+  drawGraph();
+  document.getElementById("dg-qa").innerHTML=DG_QA.map((q,i)=>
+    `<div class="qa" id="dgqa-${i}" style="margin-bottom:11px;opacity:.3;transition:opacity .4s">
+      <div style="font-size:13px;color:var(--cyan);font-weight:600;margin-bottom:4px">Q: ${q.q}</div>
+      <div style="font-size:12.5px;color:var(--txt);line-height:1.5"><span style="color:var(--ai-c);font-weight:700">A: </span>${q.a}</div>
+      <div style="font-family:ui-monospace,Consolas,monospace;font-size:8.5px;color:var(--ai-c);margin-top:3px">— ${q.src}</div></div>`).join("");
+  const st=document.getElementById("dg-status"); if(st) st.textContent="";
+}
+const dgSleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function runGraph(){
+  const btn=document.getElementById("dg-run");btn.disabled=true;resetGraph();
+  const live=document.getElementById("dg-live").checked;
+  document.getElementById("dg-status").textContent=live?"explanations: live Qwen":"explanations: pre-captured";
+  const order=[["signal",[]],["graph",[["signal","graph"]]],["method",[["graph","method"]]],
+    ["china",[["method","china"]]],["posco",[["method","posco"]]],["sundram",[["method","sundram"]]],
+    ["dchina",[["china","dchina"]]],["kposco",[["posco","kposco"]]],["ksundram",[["sundram","ksundram"]]],
+    ["optimize",[["dchina","optimize"],["kposco","optimize"],["ksundram","optimize"]]],["decision",[["optimize","decision"]]]];
+  for(const [node,edges] of order){
+    const g=document.getElementById("n-"+node); if(g) g.setAttribute("opacity","1");
+    edges.forEach(([a,b])=>{const e=document.getElementById(`e-${a}-${b}`);if(e){const dead=DG_E.find(x=>x[0]===a&&x[1]===b)[2]==="dead";
+      e.setAttribute("stroke",dead?"var(--red)":"var(--teal)");e.setAttribute("stroke-width",dead?"2":"3");if(dead){e.setAttribute("stroke-dasharray","4 4");e.setAttribute("opacity",".5");}}});
+    const qi=DG_QA.findIndex(q=>q.n===node); if(qi>=0){const el=document.getElementById("dgqa-"+qi);if(el)el.style.opacity="1";}
+    await dgSleep(live?900:650);
+  }
+  btn.disabled=false;
 }
 
 init();
