@@ -128,9 +128,16 @@ def _keyword_extract(text: str) -> dict:
             "source": "keyword-fallback"}
 
 
+import os
+# Demo speed switch: by default the deterministic keyword path is used so clicks are
+# instant on screen. Set AUTONERVE_LIVE_LLM=1 to use the local Qwen model live
+# (slower on CPU) — useful to prove the model is real during Q&A.
+_USE_LIVE_LLM = os.environ.get("AUTONERVE_LIVE_LLM", "0") == "1"
+
+
 def extract_event(article_text: str) -> dict:
-    """Structured event from article text. LLM if available, else keyword fallback."""
-    if llm.available():
+    """Structured event from article text. LLM only if explicitly enabled, else fast keyword path."""
+    if _USE_LIVE_LLM and llm.available():
         try:
             ev = llm.generate_json(EXTRACT_PROMPT.format(
                 mats=MATERIALS, comms=COMMODITIES, article=article_text))

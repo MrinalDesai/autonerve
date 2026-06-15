@@ -532,8 +532,8 @@ def extract_actions(transcript):
     deterministic sentence/keyword fallback. Whisper audio is the production
     front-end; here the input is text."""
     try:
-        import llm
-        if llm.available():
+        import os, llm
+        if os.environ.get("AUTONERVE_LIVE_LLM", "0") == "1" and llm.available():
             prompt = ("Extract action items from this meeting transcript. Return STRICT JSON: "
                       '{"actions":[{"owner":"","action":"","due":"","entity":""}]}. '
                       'entity = any part/supplier/commodity mentioned, else "". '
